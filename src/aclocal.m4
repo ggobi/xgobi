@@ -63,12 +63,12 @@ AC_DEFUN(XGOBI_C_DEPENDS,
       cat << \EOF > ${depend_rules_frag}
 Makefile.dep: $(XGVISSRC) $(XGOBISRC)
 	@echo "making $[@] from $^"
-	@$(CC) ${xgobi_depend_flag} $(ALL_CPPFLAGS) $^ > $[@]
+	$(CC) ${xgobi_depend_flag} $(ALL_CPPFLAGS) $^ > $[@]
 EOF
     else
       cat << \EOF > ${depend_rules_frag}
 Makefile.dep:
-	@touch $[@]
+	touch $[@]
 EOF
     fi
     AC_SUBST_FILE(depend_rules_frag)
