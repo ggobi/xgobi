@@ -863,7 +863,7 @@ make_view_menu(xgobidata *xg, Widget parent)
       strlen(view_menu_labelname[k])) +
       /* add 3 borderwidths, 2 at the edges and one between the
        * menu bitmap and text, and add the width of menu bitmap
-      */;
+      */
       3*ASCII_TEXT_BORDER_WIDTH + 12;
     if (width > maxwidth) {
       maxwidth = width;
