@@ -331,6 +331,7 @@ mds_distpow_cback (Widget w, XtPointer client_data, XtPointer slideposp)
   float slidepos = * (float *) slideposp;
 
   mds_distpow = floor(6. * slidepos * 1.04 * 10.) / 10. ;
+printf ("setting mds_distpow to %f\n", mds_distpow);
   if(mds_distpow > 6.) mds_distpow = 6.;
   sprintf(str, "%s: %3.1f ", "Dist Power (d^q)", mds_distpow);
   XtSetArg(args[0], XtNstring, str);
