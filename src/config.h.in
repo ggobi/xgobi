@@ -1,3 +1,7 @@
+/*
+   Input file for configuring XGobi.
+    The directory containing the source of the xgobi distribution.
+ */
 #define DEFAULTDIR "Unknown"
 
 
