@@ -44,7 +44,7 @@ dnl
 AC_DEFUN(XGOBI_C_DEPENDS,
   [ depend_rules_frag=Makefrag.dep
     AC_CACHE_CHECK(
-      [whether ${CC} accepts -M for generating dependencies],
+      [how to compiler generates dependency information],
       xgobi_depend_flag,
       [ echo "#include <math.h>" > conftest.${ac_ext}
 	if test -n "`${CC} -M conftest.${ac_ext} 2>/dev/null \
