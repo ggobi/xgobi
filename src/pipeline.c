@@ -192,8 +192,8 @@ update_sphered(xgobidata *xg, int *cols, int ncols)
   */
   if (xg->is_princ_comp)
   {
-    if (update_vc_active_and_do_svd(xg))
-      spherize_data(xg);
+    if (update_vc_active_and_do_svd(xg, xg->numvars_t, xg->tour_vars))
+      spherize_data(xg, xg->numvars_t, xg->numvars_t, xg->tour_vars);
     else
       copy_tform_to_sphered(xg);
   }
@@ -550,8 +550,8 @@ update_lims(xgobidata *xg)
    * Take sphered_data[], one column at a time, and generate
    * each column min and max.
   */
-  if (xg->is_princ_comp && xg->is_touring)
-    mean_lgdist(xg, xg->sphered_data);
+/*  if (xg->is_princ_comp && xg->is_touring)
+    mean_lgdist(xg, xg->sphered_data);*/
 
 }
 
@@ -610,9 +610,9 @@ update_world(xgobidata *xg)
 /*
  * Keep world_data[] up to date.
 */
-  if (xg->is_princ_comp && xg->is_touring)
+/*  if (xg->is_princ_comp && xg->is_touring)
     sphered_to_world(xg);
-  else
+  else*//*sphere*/
     tform_to_world(xg);
 
   /*
@@ -661,8 +661,10 @@ plane_to_screen(xgobidata *xg)
 {
   int j, k;
   long nx, ny;
-  float scale_x = (xg->is_touring) ? xg->tour_scale.x : xg->scale.x;
-  float scale_y = (xg->is_touring) ? xg->tour_scale.y : xg->scale.y;
+/*  float scale_x = (xg->is_touring) ? xg->tour_scale.x : xg->scale.x;
+  float scale_y = (xg->is_touring) ? xg->tour_scale.y : xg->scale.y;*/
+  float scale_x = xg->scale.x;
+  float scale_y = xg->scale.y;
   scale_x /= 2;
   scale_y /= 2;
 
@@ -678,13 +680,13 @@ plane_to_screen(xgobidata *xg)
     (long) (-1 * xg->minxy * scale_y) :
     (long) (-1 * xg->max.y * scale_y);
 
-  if (xg->is_princ_comp && xg->is_touring) {
-    /* multiply by fudge factor so that dimension is 
+/*  if (xg->is_princ_comp && xg->is_touring) {
+    * multiply by fudge factor so that dimension is 
      * accounted for in screen scaling
-    */
+    *
      xg->is.x = (long)((float)xg->is.x*(float)FUDGE_FACTOR);
      xg->is.y = (long)((float)xg->is.y*(float)FUDGE_FACTOR);
-  }
+  }*//* sphere*/
 
   /*
    * Calculate new coordinates.

@@ -72,7 +72,7 @@ copy_brushinfo_to_senddata(xgobidata *xg)
   xg->senddata[4] = (unsigned long) xg->link_points_to_lines;
   xg->senddata[5] = (unsigned long) xg->link_color_brushing;
   xg->senddata[6] = (unsigned long) xg->link_glyph_brushing;
-  xg->senddata[7] = (unsigned long) False;         /* not used */
+  xg->senddata[7] = (unsigned long) xg->link_erase_brushing;
   xg->senddata[8] = (unsigned long) (xg->brush_mode ? True : False);
 
   if (xg->nrgroups > 0) {
@@ -133,7 +133,7 @@ glyph_color_pointtype(xgobidata *xg, int rownum)
 }
 
 static void
-senddata_to_linecolors(xgobidata *xg, long *pointtypes, int *rownums, int npts)
+senddata_to_linecolors (xgobidata *xg, long *pointtypes, int *rownums, int npts)
 {
   int n, rownum, pointtype;
   int remainder;
@@ -156,8 +156,8 @@ senddata_to_linecolors(xgobidata *xg, long *pointtypes, int *rownums, int npts)
 }
 
 static void
-senddata_to_glyphs_and_colors(xgobidata *xg, long *pointtypes, int *rownums,
-int npts, int sending_colors, int sending_glyphs)
+senddata_to_glyphs_and_colors (xgobidata *xg, long *pointtypes, int *rownums,
+int npts, int sending_colors, int sending_glyphs, int sending_erase)
 {
   int n, rownum, pointtype;
   int remainder;
@@ -202,8 +202,8 @@ int npts, int sending_colors, int sending_glyphs)
     }
 
     remainder = remainder % 100 ;
-
-    xg->erased[rownum] = remainder / ncolors ;
+    if (sending_erase && xg->link_erase_brushing)
+      xg->erased[rownum] = remainder / ncolors ;
 
     if (!mono && sending_colors && xg->link_color_brushing) {
       remainder = remainder % ncolors ;
@@ -316,7 +316,7 @@ XtPointer retdata, unsigned long *lendata, int *fmt)
   int *brushed;
   unsigned long *rdata;
   int link_p2p, nrgroups, link_p2l;
-  int sending_colors, sending_glyphs;
+  int sending_colors, sending_glyphs, sending_erase;
   Boolean doit = False;
 
   if (*atom == XG_NEWPAINT &&
@@ -334,7 +334,7 @@ XtPointer retdata, unsigned long *lendata, int *fmt)
 
       sending_colors = (int) *rdata++ ;
       sending_glyphs = (int) *rdata++ ;
-      *rdata++ ; /* ignore sending_erase */
+      sending_erase = (int) *rdata++ ;
       trans = (int) *rdata++ ;
 
       /*
@@ -374,7 +374,7 @@ XtPointer retdata, unsigned long *lendata, int *fmt)
         if (link_p2p) {
           senddata_to_glyphs_and_colors(xg,
             (long *) rdata, brushed, npts,
-            sending_colors, sending_glyphs);
+            sending_colors, sending_glyphs, sending_erase);
         }
         else if (link_p2l) {
           senddata_to_linecolors(xg, (long *) rdata, brushed, npts);

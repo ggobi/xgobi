@@ -798,7 +798,8 @@ pp_index(xgobidata *xg, int restart_indic, int newbase_indic)
     {
       m = xg->rows_in_plot[i];
       for (k=0; k<xg->numvars_t; k++)
-        a[xg->tour_vars[k]] = xg->sphered_data[m][xg->tour_vars[k]];
+        a[xg->tour_vars[k]] = xg->tform2[m][xg->tour_vars[k]];
+/*        a[xg->tour_vars[k]] = xg->sphered_data[m][xg->tour_vars[k]];*/
       tmpf1 = inner_prod(xg->u[0], a, xg->ncols_used);
       X[0][m] = tmpf1;
       tmpf1 = inner_prod(xg->u[1], a, xg->ncols_used);
@@ -878,7 +879,8 @@ pp_index_retval(xgobidata *xg)
     {
       m = xg->rows_in_plot[i];
       for (k=0; k<xg->numvars_t; k++)
-        a[xg->tour_vars[k]] = xg->sphered_data[m][xg->tour_vars[k]];
+        a[xg->tour_vars[k]] = xg->tform2[m][xg->tour_vars[k]];
+/*        a[xg->tour_vars[k]] = xg->sphered_data[m][xg->tour_vars[k]];*/
       tmpf1 = inner_prod(xg->u[0], a, xg->ncols_used);
       X[0][m] = tmpf1;
       tmpf1 = inner_prod(xg->u[1], a, xg->ncols_used);
@@ -957,18 +959,18 @@ princ_comp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
   int j, k;
   Boolean is_one;
 
-  if (xg->is_princ_comp)
+/*  if (xg->is_princ_comp)
   {
-    /* convert back to variable axes */
-    reset_var_labels(xg, PRINCCOMP_OFF);
+    * convert back to variable axes *
     xg->is_princ_comp = False;
+    reset_var_labels(xg, PRINCCOMP_OFF);
     set_sens_pc_axes(False, xg);
 
-    xg->nhist_list = 2;/* this isn't done inside
-           reinit_tour_hist because it sometimes is 0,1. */
-    xg->old_nhist_list = -1; /* reset it different to xg->nhist_list
+    xg->nhist_list = 2;* this isn't done inside
+           reinit_tour_hist because it sometimes is 0,1. *
+    xg->old_nhist_list = -1; * reset it different to xg->nhist_list
                            because there it is used in a check in
-                           store_basis() */
+                           store_basis() *
     reinit_tour_hist(xg);
     reset_backtrack_cmd(false, false, false, false);
     set_bt_firsttime();
@@ -994,21 +996,26 @@ princ_comp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
   }
   else
   {
-/* needs to be done for linked touring */
-    if (update_vc_active_and_do_svd(xg))
-      spherize_data(xg);
+* needs to be done for linked touring *
+*    if (update_vc_active_and_do_svd(xg, xg->numvars_t, xg->tour_vars))
+      spherize_data(xg, xg->numvars_t, xg->numvars_t, xg->tour_vars);
     else
-      copy_tform_to_sphered(xg);
+    {
+       printf("in copy_tform_to_sphered \n");
+       
+       copy_tform_to_sphered(xg);
+    }
     if (singular_vc)
     {
       reset_princ_comp(False, xg);
     }
     else
-    {
-      xg->is_princ_comp = True;
-      set_sens_pc_axes(True, xg);
+    {*/
+
+     
+/*      set_sens_pc_axes(True, xg);
   
-  /* in case variables are fading out zero them now */
+  * in case variables are fading out zero them now *
       for (j=0; j<xg->ncols_used; j++)
       {
         is_one = False;
@@ -1032,14 +1039,14 @@ princ_comp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
       update_world(xg);
       tour_var_lines(xg);
   
-      /* convert to principal component axes */
+      * convert to principal component axes *
       reset_var_labels(xg, PRINCCOMP_ON);
   
-      xg->nhist_list = 2; /* this isn't done inside
-             reinit_tour_hist because it sometimes is 1,2. */
-      xg->old_nhist_list = -1; /* reset it different to xg->nhist_list
+      xg->nhist_list = 2; * this isn't done inside
+             reinit_tour_hist because it sometimes is 1,2. *
+      xg->old_nhist_list = -1; * reset it different to xg->nhist_list
                              because there it is used in a check in
-                             store_basis() */
+                             store_basis() *
       reinit_tour_hist(xg);
       reset_backtrack_cmd(false, false, false, false);
       set_bt_firsttime();
@@ -1060,7 +1067,7 @@ princ_comp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
       if (xg->is_pp_optimz)
         xg->new_direction_flag = True;
     }
-  }
+  }*/
   setToggleBitmap(w, xg->is_princ_comp);
 }
 
@@ -1273,103 +1280,103 @@ pp_dir(xgobidata *xg)
 /* 11/23/99: change all the xg->nrows_in_plot to xg->nlinkable_in_plot
    to ignore decoration points. */
   if (xg->pp_index_btn == NATURAL_HERMITE_BTN)
-    if (xg->is_princ_comp)
+/*    if (xg->is_princ_comp)
       natural_hermite_deriv(xg->sphered_data, X,
         xg->u[0], xg->u[1], dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used, xg->tour_vars, xg->numvars_t, lJ);
-    else
+    else*/
       natural_hermite_deriv(xg->tform2, X,
         xg->u[0], xg->u[1], dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used, xg->tour_vars, xg->numvars_t, lJ);
 
   else if (xg->pp_index_btn == HERMITE_BTN)
-    if (xg->is_princ_comp)
+/*    if (xg->is_princ_comp)
       hermite_deriv1(xg->sphered_data, X,
         xg->u[0], xg->u[1], dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used, xg->tour_vars, xg->numvars_t, lJ);
-    else
+    else*/
       hermite_deriv1(xg->tform2, X, xg->u[0], xg->u[1], dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used, xg->tour_vars, xg->numvars_t, lJ);
 
   else if (xg->pp_index_btn == CENTRAL_MASS_BTN)
-    if (xg->is_princ_comp)
+/*    if (xg->is_princ_comp)
       central_mass_deriv(xg->sphered_data, X, xg->u[0], xg->u[1], dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used, xg->numvars_t, xg->tour_vars);
-    else
+    else*/
       central_mass_deriv(xg->tform2, X,
         xg->u[0], xg->u[1], dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used, xg->numvars_t, xg->tour_vars);
 
   else if (xg->pp_index_btn == HOLES_BTN)
-    if (xg->is_princ_comp)
+/*    if (xg->is_princ_comp)
       holes_deriv(xg->sphered_data, X, xg->u[0], xg->u[1], dIhat,
       xg->nlinkable_in_plot, xg->rows_in_plot,
       xg->ncols_used, xg->numvars_t, xg->tour_vars);
-    else
+    else*/
       holes_deriv(xg->tform2, X, xg->u[0], xg->u[1], dIhat,
       xg->nlinkable_in_plot, xg->rows_in_plot,
       xg->ncols_used, xg->numvars_t, xg->tour_vars);
 
   else if (xg->pp_index_btn == SKEWNESS_BTN)
-    if (xg->is_princ_comp)
+/*    if (xg->is_princ_comp)
       skewness_deriv(xg->sphered_data, X, xg->u[0], xg->u[1], dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used, xg->numvars_t, xg->tour_vars);
-    else
+    else*/
       skewness_deriv(xg->tform2, X, xg->u[0], xg->u[1], dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used, xg->numvars_t, xg->tour_vars);
 
   else if (xg->pp_index_btn == LEGENDRE_BTN)
-    if (xg->is_princ_comp)
+/*    if (xg->is_princ_comp)
       legendre_deriv(xg->sphered_data, X, xg->u[0], xg->u[1], dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used, xg->tour_vars, xg->numvars_t, lJ);
-    else
+    else*/
       legendre_deriv(xg->tform2, X, xg->u[0], xg->u[1], dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used, xg->tour_vars, xg->numvars_t, lJ);
 
   else if (xg->pp_index_btn == FTS_BTN)
-    if (xg->is_princ_comp)
+/*    if (xg->is_princ_comp)
       fts_deriv(xg->sphered_data, X, dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used,
         xg->u[0], xg->u[1],
         bandwidth, xg->numvars_t, xg->tour_vars);
-    else
+    else*/
       fts_deriv(xg->tform2, X, dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used,
         xg->u[0], xg->u[1],
         bandwidth, xg->numvars_t, xg->tour_vars);
   else if (xg->pp_index_btn == ENTROPY_BTN)
-    if (xg->is_princ_comp)
+/*    if (xg->is_princ_comp)
       entropy_deriv(xg->sphered_data, X, dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used,
         xg->u[0], xg->u[1],
         bandwidth, xg->numvars_t, xg->tour_vars);
-    else
+    else*/
       entropy_deriv(xg->tform2, X, dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used,
         xg->u[0], xg->u[1],
         bandwidth, xg->numvars_t, xg->tour_vars);
   else if (xg->pp_index_btn == BIN_FTS_BTN)
-    if (xg->is_princ_comp)
+/*    if (xg->is_princ_comp)
       fts_deriv(xg->sphered_data, X, dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used,
         xg->u[0], xg->u[1],
         bandwidth, xg->numvars_t, xg->tour_vars);
-    else
+    else*/
       fts_deriv(xg->tform2, X, dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used,
@@ -1388,13 +1395,13 @@ pp_dir(xgobidata *xg)
         xg->numvars_t, xg->tour_vars, bandwidth);*/
 
   else if (xg->pp_index_btn == BIN_ENTROPY_BTN)
-    if (xg->is_princ_comp)
+/*    if (xg->is_princ_comp)
       entropy_deriv(xg->sphered_data, X, dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used,
         xg->u[0], xg->u[1],
         bandwidth, xg->numvars_t, xg->tour_vars);
-    else
+    else*/
       entropy_deriv(xg->tform2, X, dIhat,
         xg->nlinkable_in_plot, xg->rows_in_plot,
         xg->ncols_used,
@@ -1540,7 +1547,7 @@ tour_pp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
  * This callback turns on/off projection pursuit guiding.
 */
 {
-  int i;
+  int i, j;
   float ftmp;
   static int firsttime = 1;
 
@@ -1643,10 +1650,33 @@ tour_pp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
       pow((double) xg->nlinkable_in_plot, (double)(1.0/6.0)); /*11/23/99*/
     min_bandwidth = 0.05*optimal_bandwidth;
     max_bandwidth = 5.0*optimal_bandwidth;
-    if (!xg->is_princ_comp)
+    if (!check_sph_on(xg->numvars_t, xg->tour_vars))
     {
-      XtCallCallbacks(xg->princ_comp_cmd, XtNcallback, (XtPointer) xg);
+       char message[5*MSGLENGTH];
+       char str[MSGLENGTH];
+       
+        sprintf(message,"Transform active variables to PCs before doing PP.\n");
+        strcat(message,"Sphered variables are: ");
+        for (j=0; j<xg->nsph_vars; j++)
+        {
+           sprintf(str,"%d ",xg->sph_vars[j]);
+           strcat(message, str);
+        }
+        strcat(message,"\n Active Variables are: ");
+        for (j=0; j<xg->numvars_t; j++)
+        {
+           sprintf(str,"%d ",xg->tour_vars[j]);
+           strcat(message, str);
+        }
+        strcat(message,"\n");
+        show_message(message, xg);
+        singular_vc = True;
+        
     }
+/*    if (!xg->is_princ_comp)
+    {*/
+/*      XtCallCallbacks(xg->princ_comp_cmd, XtNcallback, (XtPointer) xg);*/
+/*    }*/
     
     if (singular_vc)
       reset_pp_cmd(False, xg);
@@ -3410,35 +3440,40 @@ derivs_equal_zero(xgobidata *xg)
 }
 
 void
-spherize_data(xgobidata *xg)
+spherize_data(xgobidata *xg, int num_pcs, int nsvars, int *svars)
 {
   int i, j, k, m;
-  int p = xg->numvars_t;
   float tmpf;
 
+printf("in spherize\n");
+  
 /* spherize data */
-  for (i=0; i<p; i++)
+  for (i=0; i<num_pcs; i++)
+  {
     a[i] = sqrt((double) eigenval[i]);
-
+    printf("%f ",a[i]);
+  }
+  printf("\n");
+  
   for (m=0; m<xg->nrows_in_plot; m++)
   {
     i = xg->rows_in_plot[m];
 
-    for (j=0; j<p; j++)
+    for (j=0; j<num_pcs; j++)
     {
       tmpf = 0.;
-      for (k=0; k<p; k++)
+      for (k=0; k<nsvars; k++)
       {
         tmpf = tmpf +
              vc_active[k][j] *
-             (xg->tform2[i][xg->tour_vars[k]] -
-               mean[xg->tour_vars[k]]);
+             (xg->tform1[i][svars[k]] -
+               mean[svars[k]]);
       }
       tmpf /= (a[j]);
       b[0][j] = tmpf;
     }
-    for (j=0; j<p; j++)
-      xg->sphered_data[i][xg->tour_vars[j]] = b[0][j];
+    for (j=0; j<num_pcs; j++)
+      xg->tform2[i][svars[j]] = b[0][j];
   }
 }
 
@@ -3573,37 +3608,47 @@ check_for_sphd_data(float **matrx, int n)
   return(retn_val);/* returns 1 if vc = I */
 }
 
+void
+get_evals(int nevals, float *evals)
+{
+ int j;
+
+ for (j=0; j<nevals; j++)
+    evals[j] = eigenval[j];
+}
+
 /* this routine overwrites the var-cov matrix of the old active variables
  * with the new active variables. then this matrix is put through
  * singular value decomposition and overwritten with the matrix of
  * eigenvectors, and the eigenvalues are returned in a.
 */
 int
-update_vc_active_and_do_svd(xgobidata *xg)
+update_vc_active_and_do_svd(xgobidata *xg, int nsvars, int *svars)
 {
   int i, j;
   int vc_equals_I;
   char message[5*MSGLENGTH], str[100];
 
-  for (i=0; i<xg->numvars_t; i++)
-    for (j=0; j<xg->numvars_t; j++)
-      vc_active[i][j] = vc[xg->tour_vars[i]][xg->tour_vars[j]];
+  for (i=0; i<nsvars; i++)
+    for (j=0; j<nsvars; j++)
+      vc_active[i][j] = vc[svars[i]][svars[j]];
 
   zero_ab(xg);
-  vc_equals_I = check_for_sphd_data(vc_active,xg->numvars_t);
+  vc_equals_I = check_for_sphd_data(vc_active,nsvars);
   singular_vc = False;
   if (!vc_equals_I) 
   {
-    dsvd(vc_active, xg->numvars_t, xg->numvars_t, a, b);
-    for (i=0; i<xg->numvars_t; i++)
+    dsvd(vc_active, nsvars, nsvars, a, b);
+    for (i=0; i<nsvars; i++)
     {
       eigenval[i] = a[i];
-      if (eigenval[i] == 0 || eigenval[0]/eigenval[i] > 10000)
+/*      if (eigenval[i] == 0 || eigenval[0]/eigenval[i] > 10000)
       {
         singular_vc = True;
-      }
+      }*/
     }
-    if (singular_vc)
+    
+/*    if (singular_vc)
     {
       vc_equals_I = 1;
       sprintf(message,
@@ -3614,7 +3659,7 @@ update_vc_active_and_do_svd(xgobidata *xg)
         "eigenvalues = ");
       sprintf(str, "%f ",eigenval[0]);
       strcat(message, str);
-      for (j=1; j<xg->numvars_t; j++)
+      for (j=1; j<nsvars; j++)
       {
         sprintf(str, "%f ",eigenval[j]);
         if (strlen(str) + strlen(message) >= 5*MSGLENGTH) {
@@ -3627,9 +3672,11 @@ update_vc_active_and_do_svd(xgobidata *xg)
       }
       strcat(message,"\n");
       show_message(message, xg);
-    }
+    }*/
   }
 
+  printf("%d \n",vc_equals_I);
+  
   return(!vc_equals_I);
 }
 

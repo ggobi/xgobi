@@ -328,7 +328,10 @@ symbol_reset_cb(Widget w, xgobidata *xg, XawDrawingAreaCallbackStruct *cdata)
     copy_brushinfo_to_senddata(xg);
 
     if (xg->is_point_painting) {
-      if (xg->link_glyph_brushing || xg->link_color_brushing) {
+      if (xg->link_glyph_brushing ||
+          xg->link_color_brushing ||
+          xg->link_erase_brushing)
+      {
           announce_brush_data(xg);
 
 #if defined RPC_USED || defined DCE_RPC_USED
@@ -421,7 +424,7 @@ static void
 create_clust_widgets(xgobidata *xg) {
   int i;
 
-  save_brush_groups(xg);
+  save_brush_groups (xg);
 
   if (xg->nclust > 1) {
     alloc_clust(xg);
@@ -576,17 +579,17 @@ open_exclusion_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
   XRaiseWindow(display, XtWindow(epopup));
 
   XtMapWidget(eform);
-  shift_clust_widgets(xg);
+  shift_clust_widgets (xg);
   if (xg->nclust > 1)
     for (k=0; k<xg->nclust; k++)
-      XDefineCursor(display, XtWindow(symbols[k]), default_cursor);
+      XDefineCursor (display, XtWindow(symbols[k]), default_cursor);
 }
 
 /* ARGSUSED */
 XtCallbackProc
-reset_clusters_cback(Widget w, xgobidata *xg, XtPointer callback_data)
+reset_clusters_cback (Widget w, xgobidata *xg, XtPointer callback_data)
 {
-  save_group_names(xg);
+  save_group_names (xg);
 
   XtVaGetValues(epopup,
     XtNx, &popupx,
@@ -594,11 +597,11 @@ reset_clusters_cback(Widget w, xgobidata *xg, XtPointer callback_data)
     NULL);
   XtDestroyWidget(epopup);
   epopup = NULL;
-  open_exclusion_popup_cback((Widget) NULL, xg, callback_data);
+  open_exclusion_popup_cback ((Widget) NULL, xg, callback_data);
 }
 
 void
-save_brush_groups(xgobidata *xg) {
+save_brush_groups (xgobidata *xg) {
   int i, k, n, j, groupno;
   int new_color, new_glyph;
   glyphv glyphs_used[NGLYPHS];
@@ -623,7 +626,7 @@ save_brush_groups(xgobidata *xg) {
       strcpy(clusv_prev[k].name, xg->clusv[k].name);
     }
 
-    XtFree((XtPointer) xg->clusv);
+    XtFree ((XtPointer) xg->clusv);
   }
 
   xg->nclust = 1;
@@ -762,20 +765,20 @@ save_brush_groups(xgobidata *xg) {
     }
     xg->nclust = nclust;
 
+    /*
+     * If necessary, reset the values of clusv[].hidden, clusv[].excluded.
+    */
     if (nclust > 1) {
       for (k=0; k<nclust; k++) {
         xg->clusv[k].hidden = False;
         xg->clusv[k].excluded = False;
       }
     }
-
-/*
- * If necessary, reset the values of clusv[].hidden, clusv[].excluded.
-*/
-
     for (i=0; i<nr; i++) {
-      xg->clusv[(int)GROUPID(i)].hidden = xg->erased[i];
-      xg->clusv[(int)GROUPID(i)].excluded = xg->excluded[i];
+      if (xg->erased[i])
+        xg->clusv[(int)GROUPID(i)].hidden = True;
+      if (xg->excluded[i])
+        xg->clusv[(int)GROUPID(i)].excluded = True;
     }
 
 /*
@@ -792,6 +795,23 @@ save_brush_groups(xgobidata *xg) {
 
     update_nrgroups_in_plot(xg);
   }
+
+
+/*
+ * It is possible, though not likely, that the erased or hidden state
+ * of some points was changed by the foregoing.    Just in case ...
+*/
+  copy_brushinfo_to_senddata (xg);
+  if (xg->link_glyph_brushing ||
+      xg->link_color_brushing ||
+      xg->link_erase_brushing)
+  {
+    announce_brush_data(xg);
+#if defined RPC_USED || defined DCE_RPC_USED
+    xfer_brushinfo(xg);
+#endif
+  }
+
 
   reset_3d_cmds(xg);
   if (xg->ncols_used == 3) {

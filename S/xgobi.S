@@ -1,4 +1,3 @@
-
 xgobi <- function(matrx,
                   collab     = dimnames(matrx)[[2]],
                   rowlab     = dimnames(matrx)[[1]],
@@ -25,7 +24,9 @@ xgobi <- function(matrx,
           return()
         }
         dfile <- tempfile("unix")
-        cat(t(x), file = dfile, fill = 80)
+#       cat(t(x), file = dfile, fill = 80)
+        x <- as.matrix(x)
+        cat(t(x), file=dfile, sep=c(rep(" ",ncol(x)-1),"\n"))
 
         args <- ""
 
@@ -109,8 +110,7 @@ xgobi <- function(matrx,
         if (!missing(lines))
         {
             # check data type
-            if (!is.matrix(lines) || !is.numeric(lines) || dim(lines)[2] != 2) {
-                cat("The 'lines' argument must be a numeric 2-column matrix\n")
+            if (!is.matrix(lines) || !is.numeric(lines) || dim(lines)[2] != 2) {                cat("The 'lines' argument must be a numeric 2-column matrix\n")
                 return()
             }
 
@@ -187,16 +187,15 @@ xgobi <- function(matrx,
             title <- deparse(substitute(matrx))
         args <- paste("-title", paste("'", title, "'", sep=""), args)
 
-#
+
 # Note to installer:
 # Here you will need to specify the path to the xgobi executable
 # on your system.
-        path <- paste("/usr/dfs/xgobi/src/")
-#
+        path <- paste("/usr/local/bin/")
+
         command <- paste(path, "xgobi", sep="")
         command <- paste(command, args)
-        command <- paste(command, nrow(x), ncol(x),
-            search()[1], dfile, "&")
+        command <- paste(command, dfile, "&")
         cat(command, "\n")
 
         invisible(unix(command,output.to.S=F))

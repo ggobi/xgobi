@@ -178,8 +178,8 @@ XtPointer retdata, unsigned long *lendata, int *fmt)
       if (xg->is_princ_comp && (old_numvars_t != xg->numvars_t))
       {
 
-        if (update_vc_active_and_do_svd(xg))
-          spherize_data(xg);
+        if (update_vc_active_and_do_svd(xg, xg->numvars_t, xg->tour_vars))
+          spherize_data(xg, xg->numvars_t, xg->numvars_t, xg->tour_vars);
         else
           copy_tform_to_sphered(xg);
        update_lims(xg);

@@ -206,6 +206,8 @@ extern float fts_index(float **, int, int *, float);
 extern void gen_norm_variates(int, int, float *);
 extern void get_cprof_win_dims(float *, float *, xgobidata *);
 extern void get_pp_win_dims(xgobidata *, float *, float *);
+extern void get_sph_vars(xgobidata *);/*sphere*/
+extern void get_evals(int , float *);/*sphere*/
 extern int glyph_color_pointtype(xgobidata *, int);
 extern void gram_schmidt(float *, float *, int);
 extern void grand_tour_on(xgobidata *);
@@ -307,6 +309,7 @@ extern void ob_rot_reproject(xgobidata *);
 extern void ob_rotate_proc(xgobidata *);
 extern XtCallbackProc open_exclusion_popup_cback(Widget, xgobidata *, XtPointer);
 extern XtCallbackProc open_tform_popup_cback(Widget, xgobidata *, XtPointer);
+extern XtCallbackProc open_sphere_popup_cback(Widget, xgobidata *, XtPointer);
 extern XtCallbackProc open_extend_xgobi_popup_cback(Widget, xgobidata *, XtPointer);
 extern XtCallbackProc open_import_xgobi_popup_cback(Widget, xgobidata *, XtPointer);
 extern XtCallbackProc open_imputation_popup_cback(Widget, xgobidata *, XtPointer);
@@ -455,6 +458,8 @@ extern void set_showlines(Boolean);
 extern void set_showlines_option(Boolean, xgobidata *);
 extern XtEventHandler set_sticky(Widget, xgobidata *, XEvent *);
 extern void set_title_and_icon(char *, xgobidata *);
+extern void set_sph_labs(xgobidata *xg, int);
+extern void set_sph_tform_tp(xgobidata *);
 extern XtCallbackProc set_tour_cont_fact_cback(Widget, xgobidata *, XtPointer);/* interactive gt*/
 extern XtCallbackProc set_tour_link_state_cback(Widget, xgobidata *, XtPointer);
 extern XtCallbackProc set_tour_manip_type_cback(Widget, xgobidata *, XtPointer);/* interactive gt*/
@@ -470,7 +475,7 @@ extern void skewness_deriv(float **, float **, float *, float *, float **, int, 
 extern float skewness_index(float **, int, int *);
 extern XtCallbackProc smooth_cback(Widget, XtPointer, XtPointer);
 extern void span_planes(xgobidata *);
-extern void spherize_data(xgobidata *);
+extern void spherize_data(xgobidata *, int, int, int *);
 extern XtCallbackProc spin_place_read_rmat_popup(Widget, xgobidata *, XtPointer);
 extern XtCallbackProc spin_place_save_coefs_popup(Widget, xgobidata *, XtPointer);
 extern XtCallbackProc spin_place_save_rmat_popup(Widget, xgobidata *, XtPointer);
@@ -526,7 +531,7 @@ extern void update_lims(xgobidata *);
 extern void update_list_selection(xgobidata *, int, Boolean);
 extern void update_sphered(xgobidata *xg, int *, int);
 extern void update_sticky_ids(xgobidata *);
-extern int update_vc_active_and_do_svd(xgobidata *);
+extern int update_vc_active_and_do_svd(xgobidata *,int , int *);
 extern void update_world(xgobidata *);
 extern XtEventHandler varexpose(Widget, xgobidata *, XEvent *, Boolean *);
 extern void varlist_add_group_var(xgobidata *);

@@ -132,6 +132,7 @@ init_options(xgobidata *xg)
   xg->link_lines_to_lines =  (Boolean) appdata.linkLineBrush;
   xg->link_glyph_brushing =   appdata.linkGlyphBrush;
   xg->link_color_brushing =   appdata.linkColorBrush;
+  xg->link_erase_brushing =   appdata.linkEraseBrush;
 
   xg->jump_brush =            appdata.jumpBrush;
   xg->reshape_brush =         appdata.reshapeBrush;

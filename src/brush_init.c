@@ -39,12 +39,13 @@ static Widget brush_points_cmd, brush_lines_cmd;
 
 Widget br_opt_menu_cmd, br_opt_menu, br_opt_menu_btn[3];
 
-Widget br_linkopt_menu_cmd, br_linkopt_menu, br_linkopt_menu_btn[5];
+Widget br_linkopt_menu_cmd, br_linkopt_menu, br_linkopt_menu_btn[6];
 #define LINK_P_TO_P 0
 #define LINK_L_TO_L 1
 #define LINK_P_TO_L 2
 #define LINK_COLOR  3
 #define LINK_GLYPH  4
+#define LINK_ERASE  5
 
 #define PERST_CMD br_type[0]
 #define TRANS_CMD br_type[1]
@@ -540,50 +541,29 @@ make_reset_menu(xgobidata *xg, Widget parent, Widget vref)
 void
 set_br_linkopt_menu_marks(xgobidata *xg)
 {
-  if (xg->link_points_to_points)
-    XtVaSetValues(br_linkopt_menu_btn[LINK_P_TO_P],
-      XtNleftBitmap, (Pixmap) menu_mark,
-      NULL);
-  else
-    XtVaSetValues(br_linkopt_menu_btn[LINK_P_TO_P],
-      XtNleftBitmap, (Pixmap) None,
-      NULL);
+  XtVaSetValues(br_linkopt_menu_btn[LINK_P_TO_P],
+    XtNleftBitmap, (xg->link_points_to_points) ? menu_mark : None,
+    NULL);
 
-  if (xg->link_lines_to_lines)
-    XtVaSetValues(br_linkopt_menu_btn[LINK_L_TO_L],
-      XtNleftBitmap, (Pixmap) menu_mark,
-      NULL);
-  else
-    XtVaSetValues(br_linkopt_menu_btn[LINK_L_TO_L],
-      XtNleftBitmap, (Pixmap) None,
-      NULL);
+  XtVaSetValues(br_linkopt_menu_btn[LINK_L_TO_L],
+    XtNleftBitmap, (xg->link_lines_to_lines) ? menu_mark : None,
+    NULL);
 
-  if (xg->link_points_to_lines)
-    XtVaSetValues(br_linkopt_menu_btn[LINK_P_TO_L],
-      XtNleftBitmap, (Pixmap) menu_mark,
-      NULL);
-  else
-    XtVaSetValues(br_linkopt_menu_btn[LINK_P_TO_L],
-      XtNleftBitmap, (Pixmap) None,
-      NULL);
+  XtVaSetValues(br_linkopt_menu_btn[LINK_P_TO_L],
+    XtNleftBitmap, (xg->link_points_to_lines) ? menu_mark : None,
+    NULL);
 
-  if (xg->link_color_brushing)
-    XtVaSetValues(br_linkopt_menu_btn[LINK_COLOR],
-      XtNleftBitmap, (Pixmap) menu_mark,
-      NULL);
-  else
-    XtVaSetValues(br_linkopt_menu_btn[LINK_COLOR],
-      XtNleftBitmap, (Pixmap) None,
-      NULL);
+  XtVaSetValues(br_linkopt_menu_btn[LINK_COLOR],
+    XtNleftBitmap, (xg->link_color_brushing) ? menu_mark : None,
+    NULL);
 
-  if (xg->link_glyph_brushing)
-    XtVaSetValues(br_linkopt_menu_btn[LINK_GLYPH],
-      XtNleftBitmap, (Pixmap) menu_mark,
-      NULL);
-  else
-    XtVaSetValues(br_linkopt_menu_btn[LINK_GLYPH],
-      XtNleftBitmap, (Pixmap) None,
-      NULL);
+  XtVaSetValues(br_linkopt_menu_btn[LINK_GLYPH],
+    XtNleftBitmap, (xg->link_glyph_brushing) ? menu_mark : None,
+    NULL);
+
+  XtVaSetValues(br_linkopt_menu_btn[LINK_ERASE],
+    XtNleftBitmap, (xg->link_erase_brushing) ? menu_mark : None,
+    NULL);
 }
 
 /* ARGSUSED */
@@ -603,6 +583,7 @@ br_linkopt_menu_cback (Widget w, xgobidata *xg, XtPointer callback_data)
       if (xg->link_points_to_points) {
         xg->link_points_to_lines = False;
         XtSetSensitive(br_linkopt_menu_btn[LINK_GLYPH], True);
+        XtSetSensitive(br_linkopt_menu_btn[LINK_ERASE], True);
       }
       break;
 
@@ -611,6 +592,7 @@ br_linkopt_menu_cback (Widget w, xgobidata *xg, XtPointer callback_data)
       if (xg->link_lines_to_lines) {
         xg->link_points_to_lines = False;
         XtSetSensitive(br_linkopt_menu_btn[LINK_GLYPH], True);
+        XtSetSensitive(br_linkopt_menu_btn[LINK_ERASE], True);
       }
       break;
 
@@ -619,9 +601,11 @@ br_linkopt_menu_cback (Widget w, xgobidata *xg, XtPointer callback_data)
       if (xg->link_points_to_lines) {
         xg->link_points_to_points = False;
         xg->link_lines_to_lines = False;
-        /* linking of glyphs is undefined here */
+        /* linking of glyphs or erasing is undefined here */
+        xg->link_erase_brushing = False;
         xg->link_glyph_brushing = False;
         XtSetSensitive(br_linkopt_menu_btn[LINK_GLYPH], False);
+        XtSetSensitive(br_linkopt_menu_btn[LINK_ERASE], False);
       }
       break;
 
@@ -631,6 +615,9 @@ br_linkopt_menu_cback (Widget w, xgobidata *xg, XtPointer callback_data)
     case LINK_GLYPH :
       xg->link_glyph_brushing = !xg->link_glyph_brushing;
       break;
+    case LINK_ERASE :
+      xg->link_erase_brushing = !xg->link_erase_brushing;
+      break;
   }
 
   /*
@@ -639,6 +626,7 @@ br_linkopt_menu_cback (Widget w, xgobidata *xg, XtPointer callback_data)
    * linking true -- turn them all off.
   */
   if (!xg->link_points_to_points && !xg->link_points_to_lines) {
+    xg->link_erase_brushing = False;
     xg->link_glyph_brushing = False;
     xg->link_color_brushing = False;
   }
@@ -677,7 +665,7 @@ make_br_linkopt_menu(xgobidata *xg, Widget parent, Widget href, Widget vref)
     NULL);
   if (mono) set_mono(br_linkopt_menu);
 
-  for (k=0; k<5; k++) {
+  for (k=0; k<6; k++) {
     br_linkopt_menu_btn[k] = XtVaCreateManagedWidget("Command",
       smeBSBObjectClass, br_linkopt_menu,
       XtNleftMargin, (Dimension) 24,

@@ -162,7 +162,9 @@ resort_vgroup_ids(xgobidata *xg, int *group_ids) {
    * Find maximum vgroup id.
   */
   maxid = 0;
-  for (i=1; i<xg->ncols; i++) {
+
+  /* Don't allow group variable to be vgrouped */
+  for (i=1; i<xg->ncols-1; i++) {
     if (group_ids[i] > maxid)
       maxid = group_ids[i];
   }
@@ -174,17 +176,20 @@ resort_vgroup_ids(xgobidata *xg, int *group_ids) {
   newid = -1;
   while (id <= maxid) {
     found = false;
-    for (j=0; j<xg->ncols; j++) {
+    for (j=0; j<xg->ncols-1; j++) {
       if (group_ids[j] == id) {
         newid++;
         found = true;
         break;
       }
     }
-    if (found)
-      for (j=0; j<xg->ncols; j++)
-        if (group_ids[j] == id)
+    if (found) {
+      for (j=0; j<xg->ncols-1; j++) {
+        if (group_ids[j] == id) {
           group_ids[j] = newid;
+        }
+      }
+    }
     id++;
   }
 }
@@ -272,10 +277,11 @@ FILE *open_file(char *f, char *suffix, char *rw_ind)
 
   found = (stat(fname, &buf) == 0);
   if (found) {
-    if (S_ISDIR(buf.st_mode))
+    if (S_ISDIR(buf.st_mode)) {
       ;
-    else
+    } else {
       fp = fopen(fname, rw_ind);
+    }
   }
 
   if (fp != NULL) {
@@ -293,8 +299,9 @@ FILE *open_file(char *f, char *suffix, char *rw_ind)
   return fp;
 }
 
-FILE *open_xgobi_file(char *fname, int nsuffixes, char **suffixes,
-  char *rw, Boolean optional)
+FILE *
+open_xgobi_file(char *fname, int nsuffixes, char **suffixes,
+char *rw, Boolean optional)
 {
   FILE *fp = NULL;
   int n;

@@ -2080,6 +2080,9 @@ save_resources(char *rootname, xgobidata *xg)
       sprintf(NAMESV(j), "*linkColorBrush: %d", xg->link_color_brushing);
       nameslen = nameslen + strlen(NAMESV(j)) + 1;
       j++;
+      sprintf(NAMESV(j), "*linkEraseBrush: %d", xg->link_erase_brushing);
+      nameslen = nameslen + strlen(NAMESV(j)) + 1;
+      j++;
       sprintf(NAMESV(j), "*linkLineBrush: %d", xg->link_lines_to_lines);
       nameslen = nameslen + strlen(NAMESV(j)) + 1;
       j++;
@@ -2163,6 +2166,7 @@ save_resources(char *rootname, xgobidata *xg)
       fprintf(fp, "*linkIdentify: %d\n", xg->link_identify);
       fprintf(fp, "*linkGlyphBrush: %d\n", xg->link_glyph_brushing);
       fprintf(fp, "*linkColorBrush: %d\n", xg->link_color_brushing);
+      fprintf(fp, "*linkEraseBrush: %d\n", xg->link_erase_brushing);
       fprintf(fp, "*linkLineBrush: %d\n", xg->link_lines_to_lines);
       fprintf(fp, "*carryVars: %d\n", xg->carry_vars);
       fprintf(fp, "*jumpBrush: %d\n", xg->jump_brush);

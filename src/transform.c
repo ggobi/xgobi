@@ -48,7 +48,7 @@ static char *domain_menu_btn_label[] = {
 };
 static Widget *varlabel;
 
-#define N1TFORMS 10
+#define N1TFORMS 12
 Widget stage1_tform_cmd[N1TFORMS];
 #define RESTORE      0
 #define APPLY_ADJ    1
@@ -59,7 +59,9 @@ Widget stage1_tform_cmd[N1TFORMS];
 #define SCALE        6
 #define STANDARDIZE  7
 #define DISCRETE2    8
-#define NORMSCORE    9
+#define ZSCORE       9
+#define NORMSCORE   10
+#define RANK        11
 
 static char *stage1_tform_names[] = {
   "Restore",
@@ -71,20 +73,43 @@ static char *stage1_tform_names[] = {
   "Scale to [0,1]",
   "Standardize",
   "Discretize: 2 levels",
-  "Normal score"
+  "Z-score",
+  "Normal score",
+  "Rank"
 };
 
-#define N2TFORMS 3
+#define N2TFORMS 4
 Widget stage2_tform_cmd[N2TFORMS];
 #define RESTORE      0
 #define PERMUTE      1
 #define SORT         2
+#define SPHERE       3
 
 static char *stage2_tform_names[] = {
   "Restore",
   "Permute",
   "Sort",
+  "Sphere",
 };
+
+typedef struct {
+  float f;
+  int indx;
+} paird;
+
+static int 
+pcompare (const void *val1, const void *val2)
+{
+  paird *pair1 = (paird *) val1;
+  paird *pair2 = (paird *) val2;
+  
+  if (pair1->f < pair2->f) 
+    return (-1);
+  else if (pair1->f == pair2->f)
+    return (0);
+  else 
+    return (1);
+}
 
 char message[MSGLENGTH];
 #define DOMAIN_ERROR sprintf(message, "Data outside the domain of function.\n")
@@ -97,7 +122,7 @@ static float  exponent = 1.0;
 static float  domain_incr = 0.0;
 static int    ntform_cols, *tform_cols = NULL;
 
-Boolean transform(xgobidata *, int *, int, float,
+Boolean transform1(xgobidata *, int *, int, float *,
   float (*)(float), float (*)(float), int, double);
 
 float no_change(float x)      { return x; }
@@ -111,7 +136,6 @@ float inv_raise_min_to_0(float x) { return (x - domain_incr); }
 float inv_raise_min_to_1(float x) { return (x - domain_incr - 1.0); }
 float (*inv_domain_adj)(float x);
 
-/*ARGSUSED*/
 static void
 fallback(xgobidata *xg)
 {
@@ -151,6 +175,72 @@ which_cols(int *cols, int varno, xgobidata *xg) {
   return(ncols);
 }
 
+void
+get_sph_vars(xgobidata *xg)
+{
+  int j, k;
+  Boolean state;
+   
+  xg->nsph_vars = 0;
+  for (j=0; j<xg->ncols-1; j++) {
+    XtVaGetValues(var_cbox[j], XtNstate, &state, NULL);
+    if (state) {
+      xg->sph_vars[xg->nsph_vars++] = j;
+/*      groupno = xg->vgroup_ids[j];
+      for (k=j+1; k<xg->ncols-1; k++) {
+        if (xg->vgroup_ids[k] == groupno)
+          tform_cols[ntform_cols++] = k;
+      }*/
+    }
+  }
+}
+
+void
+set_sph_labs(xgobidata *xg, int numpcs)
+{
+  int j;
+
+  for (j=0; j<numpcs; j++)
+  {
+    (void) sprintf(xg->collab_tform2[j], "PC(%s)%d", xg->collab_tform1[j],j+1);
+    XtVaSetValues(varlabel[j], XtNlabel, xg->collab_tform2[j], NULL);
+  }
+  for (j=numpcs; j<xg->nsph_vars; j++)
+  {
+    (void) sprintf(xg->collab_tform2[j], "not used PC(%s)%d", xg->collab_tform1[j],j+1);
+    XtVaSetValues(varlabel[j], XtNlabel, xg->collab_tform2[j], NULL);
+  }
+  
+}
+
+void
+set_sph_tform_tp(xgobidata *xg)
+{
+   int j;
+   
+   for (j=0; j<xg->nsph_vars; j++)
+    tform_tp[xg->sph_vars[j]].tform2 = SPHERE;
+}
+
+
+int
+check_sph_on(int nsphvars, int *sphvars)
+{
+   int j, indic=1;
+
+   printf("%d\n",nsphvars);
+   
+   for (j=0; j<nsphvars; j++){
+      printf("%d %d %d\n",j,sphvars[j],tform_tp[sphvars[j]].tform2);
+      if (tform_tp[sphvars[j]].tform2 != SPHERE)
+        indic=0;
+   }
+
+   printf("indic %d\n",indic);
+   
+   return(indic);
+}
+
 static void
 set_initial_variable(xgobidata *xg) {
   int j, jvar, gid;
@@ -175,7 +265,7 @@ set_initial_variable(xgobidata *xg) {
 }
 
 static void
-mean_stddev(xgobidata *xg, int *cols, int ncols, float (*stage1)(float),
+mean_stddev(xgobidata *xg, int col, float (*stage1)(float),
   float *mean, float *stddev)
 /*
  * Find the minimum and maximum values of a column or variable
@@ -186,15 +276,12 @@ mean_stddev(xgobidata *xg, int *cols, int ncols, float (*stage1)(float),
   int i, j, n;
   double sumxi = 0.0, sumxisq = 0.0;
   double dx, dmean, dvar, dstddev;
-  double dn = (double) (ncols * xg->nrows);
+  double dn = (double) (xg->nrows);
 
-  for (n=0; n<ncols; n++) {
-    j = cols[n];
-    for (i=0; i<xg->nrows; i++) {
-      dx = (double) (*stage1)(xg->raw_data[i][j]);
-      sumxi = sumxi + dx;
-      sumxisq = sumxisq + dx * dx;
-    }
+  for (i=0; i<xg->nrows; i++) {
+    dx = (double) (*stage1)(xg->raw_data[i][col]);
+    sumxi = sumxi + dx;
+    sumxisq = sumxisq + dx * dx;
   }
   dmean = sumxi / dn;
   dvar = (sumxisq / dn) - (dmean * dmean);
@@ -205,30 +292,54 @@ mean_stddev(xgobidata *xg, int *cols, int ncols, float (*stage1)(float),
 }
 
 float
-median(xgobidata *xg, float **data, int *cols, int ncols)
+median(xgobidata *xg, float **data, int jvar)
 {
 /*
  * Find the minimum and maximum values of each column or variable
  * group scaling by median and largest distance
 */
-  int i, j, n, np;
+  int i, j, k, n, np;
   float *x;
   double dmedian = 0;
   extern int fcompare(const void *, const void *);
 
-  np = ncols * xg->nrows;
+  np = xg->nrows_in_plot;
   x = (float *) XtMalloc((Cardinal) np * sizeof(float));
-  for (n=0; n<ncols; n++) {
-    j = cols[n];
-    for (i=0; i<xg->nrows; i++) {
-      x[n*xg->nrows_in_plot + i] = data[i][j];
+/*  for (n=0; n<ncols; n++) {
+    j = jvar;/*cols[n];*/
+    for (i=0; i<xg->nrows_in_plot; i++) {
+      k = xg->rows_in_plot[i];
+      x[n*xg->nrows_in_plot + k] = data[k][j];
     }
-  }
+/*  }*/
 
   qsort((void *) x, np, sizeof(float), fcompare);
   dmedian = ((np % 2) != 0) ?  x[(np-1)/2] : (x[np/2-1] + x[np/2])/2. ;
 
   return (float) dmedian;
+}
+
+/* adapted from Ratfor code used in S */
+double
+qnorm(double pr)
+{
+  double p, eta, term,
+    f1 = .010328,
+    f2 = .802853,
+    f3 = 2.515517,
+    f4 = .001308,
+    f5 = .189269,
+    f6 = 1.432788;
+
+  if(pr <= 0. || pr >= 1.) printf("Probability out of range (0,1): %f", pr);
+  p = pr;
+    if(p > 0.5) p = 1.0 - pr;
+          /*  depending on the size of pr this may error in
+              log or sqrt */
+  eta  = sqrt(-2.0*log(p));
+  term =((f1*eta+f2)*eta+f3)/(((f4*eta+f5)*eta+f6)*eta+1.0);
+  if(pr <= .5) return( term - eta );
+  else return ( eta - term );
 }
 
 void
@@ -246,58 +357,67 @@ reset_tform(xgobidata *xg) {
 }
 
 static int 
-sort_compare (float *val1, float *val2)
+sort_compare (const void *val1, const void *val2)
 {
-  if (*val1 < *val2) 
+  if ((float *) val1 < (float *) val2) 
     return (-1);
-  else if (*val1 == *val2)
+  else if ((float *) val1 == (float *) val2)
     return (0);
   else 
     return (1);
 }
 
 Boolean
-transform(xgobidata *xg, int *cols, int ncols, float domain_incr,
+transform1(xgobidata *xg, int *cols, int ncols, float *incr,
   float (*domain_adj)(float), float (*inv_domain_adj)(float),
   int tfnum, double param)
 {
-  int i, j, n;
-  float min, max, diff;
+  int i, j, k, n;
+  float min, max, diff, t1, tincr;
   float mean, stddev;
   float fmedian, ref;
   Boolean allequal, tform_ok = true;
   double dtmp;
 
-/* This depends on the selected variables; for now, it's
-   ok for a single variable
-*/
   switch (domain_ind) {
     case DOMAIN_OK:
-      domain_incr = 0;
+      *incr = 0;
       domain_adj = no_change;
       inv_domain_adj = no_change;
       break;
     case RAISE_MIN_TO_0:
-      domain_incr = fabs(xg->lim_raw[ tform_cols[0] ].min);
+      tincr = fabs(xg->lim_raw[ tform_cols[0] ].min);
+      for (j=0; j<ncols; j++)
+        if ( (t1=fabs(xg->lim_raw[ tform_cols[j] ].min)) > tincr )
+          tincr = t1;
+
+      *incr = tincr;
       domain_adj = raise_min_to_0;
       inv_domain_adj = inv_raise_min_to_0;
       break;
+
     case RAISE_MIN_TO_1:
-      domain_incr = fabs(xg->lim_raw[ tform_cols[0] ].min) + 1.0;
+      tincr = fabs(xg->lim_raw[ tform_cols[0] ].min);
+      for (j=0; j<ncols; j++)
+        if ( (t1=fabs(xg->lim_raw[ tform_cols[j] ].min)) > tincr )
+          tincr = t1;
+      *incr = tincr;
+
       domain_adj = raise_min_to_1;
       inv_domain_adj = inv_raise_min_to_1;
       break;
+
     case NEGATE:
-      domain_incr = 0.0;
+      *incr = 0.0;
       domain_adj = negate;
       inv_domain_adj = negate;
       break;
+
     default:
-      domain_incr = 0;
+      *incr = 0;
       domain_adj = no_change;
       inv_domain_adj = no_change;
   }
-
 
   switch(tfnum)
   {
@@ -306,14 +426,17 @@ transform(xgobidata *xg, int *cols, int ncols, float domain_incr,
       /*
        * If the transformation panel has been initialized, perform
        * the restore functions.
+       *
+       * Retore all, without regard to rows_in_plot
       */
       if (domain_menu_btn != NULL && domain_menu_btn[DOMAIN_OK] != NULL) {
         XtCallCallbacks(domain_menu_btn[DOMAIN_OK],
           XtNcallback, (XtPointer) xg);
         for (n=0; n<ncols; n++) {
           j = cols[n];
-          for (i=0; i<xg->nrows; i++)
+          for (i=0; i<xg->nrows; i++) {
             xg->tform1[i][j] = xg->raw_data[i][j];
+          }
 
           (void) strcpy(xg->collab_tform1[j], xg->collab[j]);
           XtVaSetValues(varlabel[j], XtNlabel, xg->collab_tform1[j], NULL);
@@ -325,8 +448,10 @@ transform(xgobidata *xg, int *cols, int ncols, float domain_incr,
 
       for (n=0; n<ncols; n++) {
         j = cols[n];
-        for (i=0; i<xg->nrows; i++)
-          xg->tform1[i][j] = (*domain_adj)(xg->raw_data[i][j]);
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          xg->tform1[k][j] = (*domain_adj)(xg->raw_data[k][j]);
+        }
 
         (void) strcpy(xg->collab_tform1[j], xg->collab[j]);
         XtVaSetValues(varlabel[j], XtNlabel, xg->collab_tform1[j], NULL);
@@ -339,10 +464,11 @@ transform(xgobidata *xg, int *cols, int ncols, float domain_incr,
         for (n=0; n<ncols; n++) {
           if (!tform_ok) break;
           j = cols[n];
-          for (i=0; i<xg->nrows; i++) {
-            if ((*domain_adj)(xg->raw_data[i][j]) <= 0) {
+          for (i=0; i<xg->nrows_in_plot; i++) {
+            k = xg->rows_in_plot[i];
+            if ((*domain_adj)(xg->raw_data[k][j]) <= 0) {
               fprintf(stderr, "%f %f\n",
-                xg->raw_data[i][j], (*domain_adj)(xg->raw_data[i][j]));
+                xg->raw_data[k][j], (*domain_adj)(xg->raw_data[k][j]));
               DOMAIN_ERROR;
               show_message(message, xg);
               tform_ok = false;
@@ -352,9 +478,10 @@ transform(xgobidata *xg, int *cols, int ncols, float domain_incr,
         }
         for (n=0; n<ncols; n++) {
           j = cols[n];
-          for (i=0; i<xg->nrows; i++) {
-            xg->tform1[i][j] = (float)
-              log((double) ((*domain_adj)(xg->raw_data[i][j])));
+          for (i=0; i<xg->nrows_in_plot; i++) {
+            k = xg->rows_in_plot[i];
+            xg->tform1[k][j] = (float)
+              log((double) ((*domain_adj)(xg->raw_data[k][j])));
           }
 
           (void) sprintf(xg->collab_tform1[j], "ln(%s)", xg->collab[j]);
@@ -367,21 +494,22 @@ transform(xgobidata *xg, int *cols, int ncols, float domain_incr,
         for (n=0; n<ncols; n++) {
           if (!tform_ok) break;
           j = cols[n];
-          for (i=0; i<xg->nrows; i++) {
-            dtmp = pow((double) (*domain_adj)(xg->raw_data[i][j]), param);
+          for (i=0; i<xg->nrows_in_plot; i++) {
+            k = xg->rows_in_plot[i];
+            dtmp = pow((double) (*domain_adj)(xg->raw_data[k][j]), param);
             dtmp = (dtmp - 1.0) / param;
 
             /* If dtmp no good, restore and return */
             if (!finite(dtmp)) {
               fprintf(stderr, "%f %f %f\n",
-                xg->raw_data[i][j], (*domain_adj)(xg->raw_data[i][j]), dtmp);
+                xg->raw_data[k][j], (*domain_adj)(xg->raw_data[k][j]), dtmp);
               DOMAIN_ERROR;
               show_message(message, xg);
               fallback(xg);
               tform_ok = false;
               break;
             }
-            xg->tform1[i][j] = (float) dtmp;
+            xg->tform1[k][j] = (float) dtmp;
           }
 
           (void) sprintf(xg->collab_tform1[j], "B-C(%s,%.2f)",
@@ -394,12 +522,13 @@ transform(xgobidata *xg, int *cols, int ncols, float domain_incr,
     case ABSVALUE:
       for (n=0; n<ncols; n++) {
         j = cols[n];
-        for (i=0; i<xg->nrows; i++) {
-          if ((xg->raw_data[i][j] + domain_incr) < 0)
-            xg->tform1[i][j] = (float)
-              fabs((double)(*domain_adj)(xg->raw_data[i][j])) ;
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          if ((xg->raw_data[k][j] + domain_incr) < 0)
+            xg->tform1[k][j] = (float)
+              fabs((double)(*domain_adj)(xg->raw_data[k][j])) ;
           else
-            xg->tform1[i][j] = (*domain_adj)(xg->raw_data[i][j]);
+            xg->tform1[k][j] = (*domain_adj)(xg->raw_data[k][j]);
         }
 
         (void) sprintf(xg->collab_tform1[j], "Abs(%s)", xg->collab[j]);
@@ -412,7 +541,8 @@ transform(xgobidata *xg, int *cols, int ncols, float domain_incr,
         if (!tform_ok) break;
         j = cols[n];
         for (i=0; i<xg->nrows; i++) {
-          if ( (*domain_adj)(xg->raw_data[i][j]) == 0) {
+          k = xg->rows_in_plot[i];
+          if ((*domain_adj)(xg->raw_data[k][j]) == 0) {
             DOMAIN_ERROR;
             show_message(message, xg);
             tform_ok = false;
@@ -423,9 +553,10 @@ transform(xgobidata *xg, int *cols, int ncols, float domain_incr,
 
       for (n=0; n<ncols; n++) {
         j = cols[n];
-        for (i=0; i<xg->nrows; i++) {
-          xg->tform1[i][j] = (float)
-            pow((double) (*domain_adj)(xg->raw_data[i][j]),
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          xg->tform1[k][j] = (float)
+            pow((double) (*domain_adj)(xg->raw_data[k][j]),
               (double) (-1.0));
         }
 
@@ -438,8 +569,9 @@ transform(xgobidata *xg, int *cols, int ncols, float domain_incr,
       for (n=0; n<ncols; n++) {
         if (!tform_ok) break;
         j = cols[n];
-        for (i=0; i<xg->nrows; i++) {
-          if ( (*domain_adj)(xg->raw_data[i][j]) <= 0) {
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          if ( (*domain_adj)(xg->raw_data[k][j]) <= 0) {
             DOMAIN_ERROR;
             show_message(message, xg);
             tform_ok = false;
@@ -449,9 +581,10 @@ transform(xgobidata *xg, int *cols, int ncols, float domain_incr,
       }
       for (n=0; n<ncols; n++) {
         j = cols[n];
-        for (i=0; i<xg->nrows; i++) {
-          xg->tform1[i][j] = (float)
-            log10((double) (*domain_adj)(xg->raw_data[i][j]));
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          xg->tform1[k][j] = (float)
+            log10((double) (*domain_adj)(xg->raw_data[k][j]));
         }
 
         (void) sprintf(xg->collab_tform1[j], "log10(%s)", xg->collab[j]);
@@ -462,25 +595,42 @@ transform(xgobidata *xg, int *cols, int ncols, float domain_incr,
     case SCALE:    /* Map onto [0,1] */
       /* First find min and max; they get updated after transformations */
 
-      min = max = (*domain_adj)(xg->raw_data[0][cols[0]]);
+/*      min = max = (*domain_adj)(xg->raw_data[0][cols[0]]);
       for (n=0; n<ncols; n++) {
         j = cols[n];
-        for (i=0; i<xg->nrows; i++) {
-          if ( (ref = (*domain_adj)(xg->raw_data[i][j])) < min)
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          if ( (ref = (*domain_adj)(xg->raw_data[k][j])) < min)
             min = ref;
           else if (ref > max) max = ref;
         }
       }
 
       adjust_limits(&min, &max);
-      diff = max - min;
+      diff = max - min;*/
 
       for (n=0; n<ncols; n++) {
         j = cols[n];
-        for (i=0; i<xg->nrows; i++)
-          xg->tform1[i][j] = 
-            ((*domain_adj)(xg->raw_data[i][j]) - min)/diff;
+        min = max = (*domain_adj)(xg->raw_data[0][j]);
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          if ( (ref = (*domain_adj)(xg->raw_data[k][j])) < min)
+            min = ref;
+          else if (ref > max) max = ref;
+        }
 
+        adjust_limits(&min, &max);
+        diff = max - min;
+
+        printf("%f, %f, %f\n",min,max,diff);
+        
+        for (i=0; i<xg->nrows; i++)
+        {
+           k = xg->rows_in_plot[i];
+          xg->tform1[k][j] = 
+             ((*domain_adj)(xg->raw_data[k][j]) - min)/diff;
+        }
+        
         (void) sprintf(xg->collab_tform1[j], "%s [0,1]", xg->collab[j]);
         XtVaSetValues(varlabel[j], XtNlabel, xg->collab_tform1[j], NULL);
       }
@@ -488,14 +638,16 @@ transform(xgobidata *xg, int *cols, int ncols, float domain_incr,
 
     case STANDARDIZE:    /* (x-mean)/sigma */
 
-      mean_stddev(xg, cols, ncols, domain_adj, &mean, &stddev);
       /* DOMAIN_ERROR if stddev == 0 */
 
       for (n=0; n<ncols; n++) {
         j = cols[n];
-        for (i=0; i<xg->nrows; i++)
-          xg->tform1[i][j] =
-            ((*domain_adj)(xg->raw_data[i][j]) - mean)/stddev;
+        mean_stddev(xg, j, domain_adj, &mean, &stddev);
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          xg->tform1[k][j] =
+            ((*domain_adj)(xg->raw_data[k][j]) - mean)/stddev;
+        }
 
         (void) sprintf(xg->collab_tform1[j], "(%s-m)/s", xg->collab[j]);
         XtVaSetValues(varlabel[j], XtNlabel, xg->collab_tform1[j], NULL);
@@ -504,99 +656,149 @@ transform(xgobidata *xg, int *cols, int ncols, float domain_incr,
 
     case DISCRETE2:    /* x>median */
       /* refuse to discretize if all values are the same */
-      allequal = True;
-      ref = xg->raw_data[0][cols[0]];
       for (n=0; n<ncols; n++) {
         j = cols[n];
-        for (i=0; i<xg->nrows; i++) {
-          if (xg->raw_data[i][j] != ref) {
+        allequal = True;
+        ref = xg->raw_data[0][cols[j]];
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          if (xg->raw_data[k][j] != ref) {
             allequal = False;
             break;
           }
         }
-      }
+        if (allequal) {
+          DOMAIN_ERROR;
+          show_message(message, xg);
+          tform_ok = false;
+          break;
+        }
 
-      if (allequal) {
-        DOMAIN_ERROR;
-        show_message(message, xg);
-        tform_ok = false;
-        break;
       }
 
       /* First find median */
 
-      fmedian = median(xg, xg->raw_data, cols, ncols);
-      fmedian = (*domain_adj)(fmedian);
-
       /* Then find the true min and max */
-      min = max = (*domain_adj)(xg->raw_data[0][cols[0]]);
       for (n=0; n<ncols; n++) {
         j = cols[n];
-        for (i=0; i<xg->nrows; i++) {
-          if ( (ref = (*domain_adj)(xg->raw_data[i][j])) < min)
+        min = max = (*domain_adj)(xg->raw_data[0][j]);
+        fmedian = median (xg, xg->raw_data, j);
+        fmedian = (*domain_adj)(fmedian);
+
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          if ( (ref = (*domain_adj)(xg->raw_data[k][j])) < min)
             min = ref;
           else if (ref > max) max = ref;
         }
-      }
+/*      }*/
 
       /* This prevents the collapse of the data in a special case */
       if (max == fmedian)
         fmedian = (min + max)/2.0;
 
-      for (n=0; n<ncols; n++) {
-        j = cols[n];
-        for (i=0; i<xg->nrows; i++)
-          xg->tform1[i][j] =
-            ( (*domain_adj)(xg->raw_data[i][j]) > fmedian ) ? 1.0 : 0.0;
+      printf("%f %f %f \n",min,max,fmedian);
+      
+/*      for (n=0; n<ncols; n++) {
+        j = cols[n];*/
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          xg->tform1[k][j] =
+            ( (*domain_adj)(xg->raw_data[k][j]) > fmedian ) ? 1.0 : 0.0;
+        }
 
         (void) sprintf(xg->collab_tform1[j], "%s:0,1", xg->collab[j]);
         XtVaSetValues(varlabel[j], XtNlabel, xg->collab_tform1[j], NULL);
       }
       break;
 
-    case NORMSCORE:
+    case ZSCORE:
     {
-      float *norm_score_data;
+      float *z_score_data;
       float ftmp;
 
-      /* Allocate array for normalized scores */
-      norm_score_data = (float *)
-        XtMalloc((Cardinal) xg->nrows * sizeof(float));
+      /* Allocate array for z scores */
+      z_score_data = (float *)
+        XtMalloc((Cardinal) xg->nrows_in_plot * sizeof(float));
 
      for (n=0; n<ncols; n++) {
-        float normmean=0, normvar=0;
+        float zmean=0, zvar=0;
         j = cols[n];
-        for (i=0; i<xg->nrows; i++) {
-          ftmp = (*domain_adj)(xg->raw_data[i][j]);
-          norm_score_data[i] = ftmp;
-          normmean += ftmp;
-          normvar += (ftmp * ftmp);
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          ftmp = (*domain_adj)(xg->raw_data[k][j]);
+          z_score_data[k] = ftmp;
+          zmean += ftmp;
+          zvar += (ftmp * ftmp);
         }
-        normmean /= xg->nrows;
-        normvar = (float)sqrt((float)(normvar/xg->nrows - normmean*normmean));
-        for (i=0; i<xg->nrows; i++)
-          norm_score_data[i] = (norm_score_data[i]-normmean)/normvar;
+        zmean /= xg->nrows_in_plot;
+        zvar = (float)sqrt((float)(zvar/xg->nrows_in_plot - zmean*zmean));
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          z_score_data[k] = (z_score_data[k]-zmean)/zvar;
+        }
 
-        for (i=0; i<xg->nrows; i++) {
-          if (norm_score_data[i]>0)
-            norm_score_data[i] = erf(norm_score_data[i]/sqrt(2.))/
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          if (z_score_data[k]>0)
+            z_score_data[k] = erf(z_score_data[k]/sqrt(2.))/
               2.8284271+0.5;
-          else if (norm_score_data[i]<0)
-            norm_score_data[i] = 0.5 - erf((float) fabs((double) 
-              norm_score_data[i])/sqrt(2.))/2.8284271;
+          else if (z_score_data[k]<0)
+            z_score_data[k] = 0.5 - erf((float) fabs((double) 
+              z_score_data[k])/sqrt(2.))/2.8284271;
           else 
-            norm_score_data[i]=0.5;
+            z_score_data[k]=0.5;
         }
         
-        for (i=0; i<xg->nrows; i++)
-          xg->tform1[i][j] = norm_score_data[i]; 
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          xg->tform1[k][j] = z_score_data[k]; 
+        }
 
-        (void) sprintf(xg->collab_tform1[j], "normsc(%s)", xg->collab[j]);
+        (void) sprintf(xg->collab_tform1[j], "zsc(%s)", xg->collab[j]);
         XtVaSetValues(varlabel[j], XtNlabel, xg->collab_tform1[j], NULL);
       }
-      XtFree((XtPointer) norm_score_data);/* mallika */
+      XtFree((XtPointer) z_score_data);/* mallika */
     }
     break;
+
+    case NORMSCORE:
+    case RANK:
+    {
+      paird *pairs = (paird *)
+        XtMalloc ((Cardinal) xg->nrows_in_plot * sizeof (paird));
+    
+      for (n=0; n<ncols; n++) {
+        j = cols[n];
+
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          pairs[k].f = xg->raw_data[i][j];
+          pairs[k].indx = k;
+        }
+        qsort ((char *) pairs, xg->nrows_in_plot, sizeof (paird), pcompare);
+        for (i=0; i<xg->nrows_in_plot; i++) {
+          k = xg->rows_in_plot[i];
+          xg->tform1[pairs[k].indx][j] =
+           (tfnum == RANK) ?
+             (float) k :
+             qnorm ((float) (k+1) / (float) (xg->nrows_in_plot+1));
+        }
+
+        if (tfnum == NORMSCORE)
+          (void) sprintf(xg->collab_tform2[j],
+            "normsc(%s)", xg->collab_tform1[j]);
+        else
+          (void) sprintf(xg->collab_tform2[j],
+            "rank(%s)", xg->collab_tform1[j]);
+
+        XtVaSetValues(varlabel[j], XtNlabel, xg->collab_tform2[j], NULL);
+      }
+
+      XtFree ((XtPointer) pairs);
+    }
+      break;
+
   }
 
   if (tform_ok) {
@@ -604,7 +806,7 @@ transform(xgobidata *xg, int *cols, int ncols, float domain_incr,
     /* Set tform_tp[] for transformed columns */
     for (n=0; n<ncols; n++) {
       tform_tp[cols[n]].tform1 = tfnum;
-      tform_tp[cols[n]].domain_incr = domain_incr;
+      tform_tp[cols[n]].domain_incr = *incr;
       tform_tp[cols[n]].param = param;
       tform_tp[cols[n]].domain_adj = domain_adj;
       tform_tp[cols[n]].inv_domain_adj = inv_domain_adj;
@@ -631,7 +833,7 @@ tform_response(xgobidata *xg, int *cols, int ncols)
   /*
    * Reset vgroups?
   */
-  gid = xg->vgroup_ids[cols[0]];
+/*  gid = xg->vgroup_ids[cols[0]];
   for (n=1; n<ncols; n++) {
     if (xg->vgroup_ids[cols[n]] != gid) {
       reset_vgroups = true;
@@ -645,12 +847,17 @@ tform_response(xgobidata *xg, int *cols, int ncols)
     }
 
     resort_vgroup_ids(xg, xg->vgroup_ids);
-  }
+  }*/
+
 
   if (xg->ncols_used > 2)
     update_sphered(xg, cols, ncols);
   update_lims(xg);
   update_world(xg);
+
+/*  if (xg->is_xyplotting) - bug fix di 4/19/2000*/
+  if (xg->is_plotting1d)
+    plot1d_texture_var(xg);
 
   world_to_plane(xg);
   plane_to_screen(xg);
@@ -688,7 +895,7 @@ tform_response(xgobidata *xg, int *cols, int ncols)
 static XtCallbackProc
 stage1_tform_cback(Widget w, xgobidata *xg, XtPointer cbdata)
 {
-  int tfno, ntform_cols, j, k, groupno;
+  int tfno, j, k, groupno;
   Boolean state;
 
   for (tfno=0; tfno<N1TFORMS; tfno++)
@@ -700,22 +907,23 @@ stage1_tform_cback(Widget w, xgobidata *xg, XtPointer cbdata)
     XtVaGetValues(var_cbox[j], XtNstate, &state, NULL);
     if (state) {
       tform_cols[ntform_cols++] = j;
-      groupno = xg->vgroup_ids[j];
+/*      groupno = xg->vgroup_ids[j];
       for (k=j+1; k<xg->ncols-1; k++) {
         if (xg->vgroup_ids[k] == groupno)
           tform_cols[ntform_cols++] = k;
-      }
+      }*/
     }
   }
 
   if (ntform_cols > 0) {
-    if (transform(xg, tform_cols, ntform_cols,
-      domain_incr, domain_adj, inv_domain_adj,
+    if (transform1(xg, tform_cols, ntform_cols,
+      &domain_incr, domain_adj, inv_domain_adj,
       tfno, (double) exponent))
     {
       tform_response(xg, tform_cols, ntform_cols);
     }
   }
+
 }
 
 /* power transform */
@@ -744,8 +952,8 @@ reset_exp(xgobidata *xg) {
   }
 
   if (ntform_cols > 0) {
-    if (transform(xg, tform_cols, ntform_cols,
-      domain_incr, domain_adj, inv_domain_adj,
+    if (transform1(xg, tform_cols, ntform_cols,
+      &domain_incr, domain_adj, inv_domain_adj,
       tfno, (double) exponent))
     {
       tform_response(xg, tform_cols, ntform_cols);
@@ -844,6 +1052,15 @@ transform2(xgobidata *xg, int *cols, int ncols, int tfnum)
   {
     case RESTORE:    /* Restore the values from transformation, stage 1 */
 
+      if (xg->is_princ_comp)
+      {
+         xg->nsph_vars=0;
+         xg->is_princ_comp = False;
+         XtVaSetValues(xg->princ_comp_cmd, XtNstate, False, NULL);
+         setToggleBitmap(xg->princ_comp_cmd, False);
+         set_sens_pc_axes(False, xg);
+      }
+      
       for (n=0; n<ncols; n++) {
         j = cols[n];
         (void) strcpy(xg->collab_tform2[j], xg->collab_tform1[j]);
@@ -888,17 +1105,19 @@ transform2(xgobidata *xg, int *cols, int ncols, int tfnum)
       /*  create sort index  here - mallika */
       float *sort_data; /* mallika */
       /* Allocate array for sorted columns - mallika */
-      sort_data = (float *) XtMalloc((Cardinal) xg->nrows * sizeof(float));
+      sort_data = (float *)
+        XtMalloc((Cardinal) xg->nrows_in_plot * sizeof(float));
 
       for (n=0; n<ncols; n++) {
         j = cols[n];
-        for (i=0; i<xg->nrows; i++)
-          sort_data[i] = xg->tform1[i][j];
+        for (i=0; i<xg->nrows_in_plot; i++)
+          sort_data[i] = xg->tform1[xg->rows_in_plot[i]][j];
 
-        qsort((char *) sort_data, xg->nrows, sizeof(float), sort_compare);
+        qsort ((void *) sort_data, xg->nrows_in_plot,
+          sizeof (float), sort_compare);
    
-        for (i=0; i<xg->nrows; i++)
-          xg->tform2[i][j] = sort_data[i]; 
+        for (i=0; i<xg->nrows_in_plot; i++)
+          xg->tform2[xg->rows_in_plot[i]][j] = sort_data[i]; 
 
         (void) sprintf(xg->collab_tform2[j], "sort(%s)", xg->collab_tform1[j]);
         XtVaSetValues(varlabel[j], XtNlabel, xg->collab_tform2[j], NULL);
@@ -906,6 +1125,11 @@ transform2(xgobidata *xg, int *cols, int ncols, int tfnum)
       XtFree((XtPointer) sort_data);
       break;
     }
+  }
+
+    /* Set tform_tp[] for transformed columns */
+  for (n=0; n<ncols; n++) {
+    tform_tp[cols[n]].tform2 = tfnum;
   }
 
   return 1;
@@ -967,7 +1191,8 @@ open_tform_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
   char str[64];
   static char *domain_menu_str = "Domain adjustment:";
   Widget domain_menu_box, domain_menu_lab, domain_menu;
-  Widget vport, vport_child, reset_vgroups_cmd;
+  Widget vport, vport_child;
+  /*Widget reset_vgroups_cmd;*/
   Widget box_stage[4];
   Boolean doit = false;
 
@@ -976,7 +1201,8 @@ open_tform_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
   if (tpopup == NULL) {
     tform_cols = (int *) XtMalloc((Cardinal) (xg->ncols-1) * sizeof(int));
     var_cbox = (Widget *) XtMalloc((Cardinal) (xg->ncols-1) * sizeof(Widget));
-
+    xg->sph_vars = (int *) XtMalloc((Cardinal) (xg->ncols-1) * sizeof(int));/* sphere*/
+    
     alloc_transform_tp(xg);
 
     if (popupx == -1 && popupy == -1) {
@@ -1134,7 +1360,7 @@ open_tform_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
       labelWidgetClass, box_stage[2],
       NULL);
 
-    for (j=0; j<N2TFORMS; j++) {
+    for (j=0; j<N2TFORMS-1; j++) {
       stage2_tform_cmd[j] = CreateCommand(xg, stage2_tform_names[j], True, 
         NULL, NULL, box_stage[2], "Transformations");
       XtManageChild(stage2_tform_cmd[j]);
@@ -1142,6 +1368,12 @@ open_tform_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
         (XtCallbackProc) stage2_tform_cback, (XtPointer) xg);
     }
 
+    stage2_tform_cmd[SPHERE] = CreateCommand(xg, stage2_tform_names[SPHERE],
+      True, NULL, NULL, box_stage[2], "Transformations");
+    XtManageChild(stage2_tform_cmd[SPHERE]);
+    XtAddCallback(stage2_tform_cmd[SPHERE], XtNcallback,
+      (XtCallbackProc) open_sphere_popup_cback, (XtPointer) xg);
+    
     vport = XtVaCreateManagedWidget("ViewPort",
       viewportWidgetClass, form0,
       XtNallowHoriz, False,
@@ -1172,11 +1404,14 @@ open_tform_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
     }
     XtManageChildren(var_cbox, xg->ncols-1);
 
+/*
+ * dfs: let's just hide this thing
     reset_vgroups_cmd = CreateCommand(xg, "Restore vgroups", True, 
       box_tforms, vport, form0, "Transformations");
     XtManageChild(reset_vgroups_cmd);
     XtAddCallback(reset_vgroups_cmd, XtNcallback,
      (XtCallbackProc) reset_vgroups_cback, (XtPointer) xg);
+*/
 
     box_varlabels = XtVaCreateManagedWidget("Form",
       formWidgetClass, vport_child,
@@ -1301,8 +1536,9 @@ inv_transform(int icase, int jvar, xgobidata *xg) {
       break;
 
     case STANDARDIZE:    /* (x-mean)/sigma */
-      mean_stddev(xg, cols, ncols, tform_tp[jvar].inv_domain_adj,
+      mean_stddev(xg, jvar, tform_tp[jvar].inv_domain_adj,
         &mean, &stddev);
+       
       new_rx = (tx * stddev) + mean;
       break;
 
@@ -1317,6 +1553,7 @@ inv_transform(int icase, int jvar, xgobidata *xg) {
  * the data to its untransformed state.  Let's worry about it later ...
 */
 
+    case ZSCORE:
     case NORMSCORE:
       cols = (int *) XtMalloc((Cardinal) (xg->ncols-1) * sizeof(int));
       ncols = which_cols(cols, jvar, xg);
@@ -1352,8 +1589,8 @@ permute_again(xgobidata *xg) {
 void
 restore_variables(xgobidata *xg) {
   if (ntform_cols > 0 && tform_cols != NULL) {
-    if ( transform(xg, tform_cols, ntform_cols,
-      domain_incr, domain_adj, inv_domain_adj,
+    if ( transform1(xg, tform_cols, ntform_cols,
+      &domain_incr, domain_adj, inv_domain_adj,
       RESTORE, 0.0) )
     {
       tform_response(xg, tform_cols, ntform_cols);
@@ -1369,9 +1606,10 @@ transform_all(xgobidata *xg) {
   for (j=0; j<xg->ncols-1; j++) {
     cols[0] = j;
     if (tform_tp != (TFormType *) NULL && &tform_tp[j] != (TFormType *) NULL)
-      transform(xg, cols, 1,
-        tform_tp[j].domain_incr,
+      transform1(xg, cols, 1,
+        &tform_tp[j].domain_incr,
         tform_tp[j].domain_adj, tform_tp[j].inv_domain_adj,
         tform_tp[j].tform1, tform_tp[j].param);
   }
 }
+

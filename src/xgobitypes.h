@@ -504,7 +504,7 @@ typedef struct {
  unsigned long *line_color_ids, *line_color_now, *line_color_prev;
 
 /* linking of brushing, identification, touring ... */
- Boolean link_glyph_brushing, link_color_brushing;
+ Boolean link_glyph_brushing, link_color_brushing, link_erase_brushing;
  Boolean link_points_to_points, link_points_to_lines;
  Boolean link_lines_to_lines;
  Boolean link_identify;
@@ -597,6 +597,9 @@ typedef struct {
  int numvars_t;
  /*numbers of chosen variables */
  int *tour_vars;
+ /*numbers of sphered variables */
+ int nsph_vars;
+ int *sph_vars;
  /* for backtracking */
  hist_rec *fl, *curr, *hfirst, *hend;
  int nhist_list, max_nhist_list, old_nhist_list;

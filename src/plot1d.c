@@ -293,12 +293,12 @@ XtCallbackProc
 ptype_ash_cback(Widget w, xgobidata *xg, XtPointer callback_data)
 {
   plot1d_type = ASH;
-  reset_plot1d_type(xg);
+  reset_plot1d_type (xg);
 }
 
 /* ARGSUSED */
 XtCallbackProc
-nASHes_cback(Widget w, xgobidata *xg, XtPointer slideposp)
+nASHes_cback (Widget w, xgobidata *xg, XtPointer slideposp)
 {
   float fslidepos = * (float *) slideposp;
   char str[16];
@@ -446,7 +446,7 @@ make_plot1d(xgobidata *xg)
    * slidepos = 2 * (float) nASHes / (float) nbins - .01;
   */
   XawScrollbarSetThumb(nASHes_sbar,
-    2 * (float) nASHes / (float) nbins  - .01,
+    2 * (float) nASHes / (float) nbins  - .01,  /*-- 2*20/200 - .01 --*/
     -1.);
   XtAddCallback(nASHes_sbar, XtNjumpProc,
     (XtCallbackProc) nASHes_cback, (XtPointer) xg);

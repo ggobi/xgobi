@@ -65,7 +65,7 @@ read_toggle_cback(Widget w, xgobidata *xg, XtPointer cback_data)
 /***********************************************************/
 
 Boolean
-read_collab_to_row(char *data_in, Boolean init, xgobidata *xg)
+read_collab_to_row (char *data_in, Boolean init, xgobidata *xg)
 {
   char lab_file[128];
   static char *suffixes[] = {
@@ -688,7 +688,7 @@ read_rgroups(char *data_in, Boolean init, xgobidata *xg)
   static char *suffixes[] = {".rgroups"};
   int itmp, i, j, k;
   Boolean found = False;
-  Boolean found_rg;
+  Boolean found_rg = False;
   FILE *fp;
   long *nels;
   int nr;
@@ -891,7 +891,7 @@ xgobidata *xg)
   Boolean ok = True;
   char lab_file[128];
   int i, j, k;
-  Boolean found;
+  Boolean found = False;
   FILE *fp;
   int gid;
   glyphv glyph;
@@ -1083,7 +1083,7 @@ xgobidata *xg)
 {
   Boolean ok = True;
   int i, j, k, ncases;
-  Boolean found;
+  Boolean found = False;
   Colormap cmap = DefaultColormap(display, DefaultScreen(display));
   XColor exact;
   char color_name[32];
@@ -1102,9 +1102,9 @@ xgobidata *xg)
       if ( (fp = open_xgobi_file(data_in, 1, suffixes, "r", true)) != NULL)
         found = True;
 
-      if (!found && reinit == True)
+      if (!found && reinit == True) {
         init_color_ids(xg);
-      else {
+      } else {
         /*
          * Keep track of the color names read in;
          * assume that there aren't going to be more than 64 colors
@@ -1127,7 +1127,8 @@ xgobidata *xg)
               break;
 
             if (xg->file_read_type == read_all ||
-               xg->file_rows_sampled != NULL && k == xg->file_rows_sampled[ncases])
+               xg->file_rows_sampled != NULL &&
+                 k == xg->file_rows_sampled[ncases])
             {
 
               if (strcmp(color_name, "Default") == 0) {
@@ -1321,13 +1322,14 @@ xgobidata *xg)
 
           /* Fill out the rest of the labels */
           k=xg->sm_nrows;
-          for (j=0; j<(xg->sm_ncols*(xg->sm_ncols-1)/2-1); j++)
+          for (j=0; j<(xg->sm_ncols*(xg->sm_ncols-1)/2-1); j++) {
             for (i=0; i<xg->sm_nrows; i++)
             {
               xg->color_ids[k] = xg->color_now[k] =
                 xg->color_prev[k] = xg->color_ids[i];
               k++;
             }
+          }
           for (j=0; j<xg->sm_ncols; j++)
           {
             xg->color_ids[k+j] = xg->color_now[k+j] = 
@@ -1336,7 +1338,6 @@ xgobidata *xg)
 
         }
       }
-
     }
     else
       init_color_ids(xg);
@@ -1355,7 +1356,6 @@ read_erase(char *data_in, Boolean reinit, xgobidata *xg)
   FILE *fp;
   char *suffixes[] = {".erase"};
 
-printf("(read_erase) nrows %d\n", xg->nrows);
   xg->erased = (unsigned short *) XtRealloc((char *) xg->erased,
     (Cardinal) xg->nrows * sizeof(unsigned short));
 
@@ -1422,16 +1422,20 @@ read_connecting_lines(char *rootname, Boolean startup, xgobidata *xg)
   FILE *fp;
   static char *suffixes[] = {".lines"};
 
-  if ((rootname == NULL) || (strcmp(rootname, "") == 0) || 
-      strcmp(rootname, "stdin") == 0)
+  if ((rootname != NULL) && (strcmp (rootname, "") != 0) &&
+     strcmp (rootname, "stdin") != 0)
   {
-    create_default_lines(xg);
-    return(ok);
-  } else
-    if ( (fp = open_xgobi_file(rootname, 1, suffixes, "r", true)) != NULL)
+    if ((fp = open_xgobi_file(rootname, 1, suffixes, "r", true)) != NULL)
       found = True;
+  }
 
-  if (found) {
+  if (!found) {
+
+    create_default_lines(xg);
+    return (ok);
+
+  } else {
+
     int a, b;
 
     xg->nlines = 0;
@@ -1441,14 +1445,13 @@ read_connecting_lines(char *rootname, Boolean startup, xgobidata *xg)
     xg->connecting_lines = (connect_lines *) XtMalloc(
       (Cardinal) bsize * sizeof(connect_lines));
     nblocks = 1;
-    while (1)
-    {
+
+    while (1) {
       fs = fscanf(fp, "%d %d", &a, &b);
       if (fs == EOF)
         break;
       else if (fs < 0) {
         ok = False;
-/* won't change this one; called at startup */
         fprintf(stderr, "Error in reading .lines file\n");
         exit(1);
       }
@@ -1600,16 +1603,16 @@ read_selected_xgobi_files(Widget w, xgobidata *xg, XtPointer callback_data)
   XtVaGetValues(PTCOLOR_TGL, XtNstate, &set, NULL);
   read_files = read_files || set;
   if (set)
-    if (read_point_colors(rootname, True, True, xg) == 0)
-      return((XtCallbackProc) 0);
+    if (read_point_colors (rootname, True, True, xg) == 0)
+      return ((XtCallbackProc) 0);
     else
       xg->got_new_paint = True;
 
   XtVaGetValues(PTGLYPH_TGL, XtNstate, &set, NULL);
   read_files = read_files || set;
   if (set)
-    if (read_point_glyphs(rootname, True, True, xg) == 0)
-      return((XtCallbackProc) 0);
+    if (read_point_glyphs (rootname, True, True, xg) == 0)
+      return ((XtCallbackProc) 0);
     else
       xg->got_new_paint = True;
 

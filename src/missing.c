@@ -232,7 +232,7 @@ read_imputation_data(xgobidata *xg)
 
     sprintf(fname, "%s.imp", xg->datafname);
 
-    if ( (fp = open_xgobi_file(xg->datafname, 1, suffixes, "r", false)) != NULL)
+    if ( (fp = open_xgobi_file(xg->datafname, 1, suffixes, "r", true)) != NULL)
     {
       /* Read in the first row to get the number of imputations */
 
@@ -483,8 +483,8 @@ update_imputation(xgobidata *xg)
 
   if (xg->is_princ_comp && xg->ncols_used >= 2)
   {
-    if (update_vc_active_and_do_svd(xg))
-      spherize_data(xg);
+    if (update_vc_active_and_do_svd(xg, xg->numvars_t, xg->tour_vars))
+      spherize_data(xg, xg->numvars_t, xg->numvars_t, xg->tour_vars);
     else
       copy_tform_to_sphered(xg);
   }

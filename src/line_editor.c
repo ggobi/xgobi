@@ -950,16 +950,6 @@ draw_connecting_lines(xgobidata *xg)
       XDrawSegments(display, xg->pixmap0, copy_GC,
         connecting_segs, nlines_in_plot);
 
-/*
-printf("connecting\n");
-for (i=0; i<nlines_in_plot; i++)
-printf("%d %d, %d %d\n", connecting_segs[i].x1, connecting_segs[i].y1,
-connecting_segs[i].x2, connecting_segs[i].y2);
-printf("arrowheads\n");
-for (i=0; i<nlines_in_plot; i++)
-printf("%d %d, %d %d\n", arrowhead_segs[i].x1, arrowhead_segs[i].y1,
-arrowhead_segs[i].x2, arrowhead_segs[i].y2);
-*/
       if (xg->plot_the_arrows) {
 
         XSetLineAttributes(display, copy_GC, 3, LineSolid,
@@ -1210,28 +1200,6 @@ set_lgroups(Boolean init, xgobidata *xg) {
         xg->lgroup_ids[i] = gp;
       }
     }
-
-/*
-    printf("lgroup pointers\n");
-    for (i=0; i<xg->nlines; i++)
-      printf(" %d ", xg->lgroup_ids[i]);
-    printf("\n");
-
-    printf("nels\n");
-    for (i=0; i<xg->nlgroups; i++)
-      printf(" %d ", nels[i]);
-    printf("\n");
-
-    printf("lgroup nels\n");
-    for (i=0; i<xg->nlgroups; i++)
-      printf(" %d ", xg->lgroups[i].nels);
-    printf("\n");
-
-    printf("lgroup ids\n");
-    for (i=0; i<xg->nlgroups; i++)
-      printf(" %d ", xg->lgroups[i].id);
-    printf("\n");
-*/
 
     /*
      * On this sweep, find out how many groups there are and how

@@ -52,9 +52,8 @@
 #include "xgobiexterns.h"
 
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+#include "config.h" 
 #endif
-
 
 static jmp_buf env;
 
@@ -755,33 +754,64 @@ print_plot_window(Widget w, int type, xgobidata *xg)
     {
       if (xg->is_plotting1d)
       {
-        (void) fprintf(psfile, "%% yax: (label) red green blue x1 y1 x2 y2\n");
-        (void) fprintf(psfile, "%%  draw y axis and label\n");
-        (void) fprintf(psfile, "(%s) %f %f %f %f %f %f %f yax\n",
-          xg->collab_tform2[xg->plot1d_vars.y],
-          (float) fg.red / (float) 65535,
-          (float) fg.green / (float) 65535,
-          (float) fg.blue / (float) 65535,
-          (float) (xg->screen_axes[1].x - minx) * fac + xoff,
-          (float) (maxy - xg->screen_axes[1].y) * fac + yoff,
-          (float) (xg->screen_axes[0].x - minx) * fac + xoff,
-          (float) (maxy - xg->screen_axes[0].y) * fac + yoff );
-
-        (void) fprintf(psfile, "%% ytx: (label) red green blue x y\n");
-        (void) fprintf(psfile, "%%  draw y axis tick and label\n");
-        start = check_y_axis(xg, xg->plot1d_vars.y, &xg->ticks);
-        for (i=start; i<xg->ticks.nticks[xg->plot1d_vars.y]; i++)
-        {
-          find_tick_label(xg, xg->plot1d_vars.y, i,
-            xg->ticks.yticks, str);
-          (void) fprintf(psfile, "(%s) %f %f %f %f %f ytx\n",
-            str,
+        if (xg->plot1d_vars.y != -1) {
+          (void) fprintf(psfile, "%% yax: (label) red green blue x1 y1 x2 y2\n");
+          (void) fprintf(psfile, "%%  draw y axis and label\n");
+          (void) fprintf(psfile, "(%s) %f %f %f %f %f %f %f yax\n",
+            xg->collab_tform2[xg->plot1d_vars.y],
             (float) fg.red / (float) 65535,
             (float) fg.green / (float) 65535,
             (float) fg.blue / (float) 65535,
             (float) (xg->screen_axes[1].x - minx) * fac + xoff,
-            (float) (maxy - xg->ticks.screen[i].y) * fac + yoff );
-        }
+            (float) (maxy - xg->screen_axes[1].y) * fac + yoff,
+            (float) (xg->screen_axes[0].x - minx) * fac + xoff,
+            (float) (maxy - xg->screen_axes[0].y) * fac + yoff );
+
+          (void) fprintf(psfile, "%% ytx: (label) red green blue x y\n");
+          (void) fprintf(psfile, "%%  draw y axis tick and label\n");
+          start = check_y_axis(xg, xg->plot1d_vars.y, &xg->ticks);
+          for (i=start; i<xg->ticks.nticks[xg->plot1d_vars.y]; i++)
+          {
+            find_tick_label(xg, xg->plot1d_vars.y, i,
+              xg->ticks.yticks, str);
+            (void) fprintf(psfile, "(%s) %f %f %f %f %f ytx\n",
+              str,
+              (float) fg.red / (float) 65535,
+              (float) fg.green / (float) 65535,
+              (float) fg.blue / (float) 65535,
+              (float) (xg->screen_axes[1].x - minx) * fac + xoff,
+              (float) (maxy - xg->ticks.screen[i].y) * fac + yoff );
+          }
+	} else {
+          (void) fprintf(psfile, "%% yax: (label) red green blue x1 y1 x2 y2\n");
+          (void) fprintf(psfile, "%%  draw x axis and label\n");
+          (void) fprintf(psfile, "(%s) %f %f %f %f %f %f %f xax\n",
+            xg->collab_tform2[xg->plot1d_vars.x],
+            (float) fg.red / (float) 65535,
+            (float) fg.green / (float) 65535,
+            (float) fg.blue / (float) 65535,
+            (float) (xg->screen_axes[1].x - minx) * fac + xoff,
+            (float) (maxy - xg->screen_axes[1].y) * fac + yoff,
+            (float) (xg->screen_axes[2].x - minx) * fac + xoff,
+            (float) (maxy - xg->screen_axes[2].y) * fac + yoff );
+
+          (void) fprintf(psfile, "%% xtx: (label) red green blue x y\n");
+          (void) fprintf(psfile, "%%  draw x axis tick and label\n");
+          start = check_x_axis(xg, xg->plot1d_vars.x, &xg->ticks);
+          for (i=start; i<xg->ticks.nticks[xg->plot1d_vars.x]; i++)
+          {
+            find_tick_label(xg, xg->plot1d_vars.x, i,
+              xg->ticks.xticks, str);
+            (void) fprintf(psfile, "(%s) %f %f %f %f %f xtx\n",
+              str,
+              (float) fg.red / (float) 65535,
+              (float) fg.green / (float) 65535,
+              (float) fg.blue / (float) 65535,
+              (float) (xg->ticks.screen[i].x - minx) * fac + xoff,
+              (float) (maxy - xg->screen_axes[1].y) * fac + yoff );
+          }
+	}
+
 
       }
       else if (xg->is_xyplotting)

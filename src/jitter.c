@@ -126,11 +126,6 @@ jitter_data(xgobidata *xg)
   int *cols;
   int i, j, k, m, ncols = 0;
   int nvgroups = numvargroups(xg);
-/*
-  float rjit;
-  long lrand;
-  long worldx;
-*/
 
 /*
  * First determine the variables to be jittered:

@@ -2,7 +2,7 @@
 # $XConsortium: imake.c /main/90 1996/11/13 14:43:23 lehors $
 
 # ----------------------------------------------------------------------
-# Makefile generated from "Imake.tmpl" and </tmp/IIf.a06wDM>
+# Makefile generated from "Imake.tmpl" and </tmp/IIf.a0HHgO>
 # $TOG: Imake.tmpl /main/245 1997/05/20 10:05:47 kaleb $
 #
 
@@ -502,6 +502,12 @@ CXXPROJECT_DEFINES =
 #	should need to be made is for the XGOBID variable and sometimes
 #	the random number generator.
 #
+
+# Remove the comment delimeters on the second to next line to
+# compile for CORBA.
+# Requires some Omegahat code - see README.corba.
+#define USE_CORBA 1
+
 #  Set XGOBID to the directory containing
 #  the xgobi directories src, help, ps, etc.
          #XGOBID = $(PWD)/..
@@ -510,12 +516,14 @@ CXXPROJECT_DEFINES =
 # building xgobi as we hand it out, this shouldn't bother
 # you at all.
              CC = cc
+      CCOPTIONS = -xansi -n32 -woff 1116
+
+            #CC = gcc
+     #CCOPTIONS = -ansi -w
+
              LD =
      CDEBUGFLAGS = -g
 # EXTRA_LDOPTIONS = -static
-      # for gcc
-      #CCOPTIONS = -ansi -w -DDEBUG
-      CCOPTIONS = -xansi -DDEBUG
 
 #  Choose a random number generator, random or drand48
                R = USE_RANDOM
@@ -532,7 +540,7 @@ CXXPROJECT_DEFINES =
 
 # If you plan to use XPLORE, uncomment this #define
 
- LOCAL_LIBRARIES = $(XAWLIB) $(XMULIB) $(XTOOLLIB) $(XLIB)
+ LOCAL_LIBRARIES =  $(XAWLIB) $(XMULIB) $(XTOOLLIB) $(XLIB)
 
    SYS_LIBRARIES = -lm
 
@@ -543,7 +551,7 @@ JOINTSRC = xgobi_init.c pipeline.c read_array.c \
 	initialize.c widgets.c callbacks.c getfname.c \
 	xyplot.c make_axes.c line_editor.c missing.c  \
 	spin_cbacks.c spin.c scaling.c scale_cbacks.c \
-	identify.c var_panel.c transform.c stdize.c inference.c \
+	identify.c var_panel.c transform.c sphere.c stdize.c inference.c \
 	brush_init.c brush_cbacks.c brush.c paint.c brush_send.c \
 	help.c prt_plotwin.c subset.c vc_lists.c exclusion.c \
 	plot_once.c plot1d.c texture.c ash1d.c move_points.c \
@@ -559,7 +567,7 @@ JOINTOBJ = xgobi_init.o pipeline.o read_array.o \
 	initialize.o widgets.o callbacks.o getfname.o \
 	xyplot.o make_axes.o line_editor.o missing.o  \
 	spin_cbacks.o spin.o scaling.o scale_cbacks.o \
-	identify.o var_panel.o transform.o stdize.o inference.o \
+	identify.o var_panel.o transform.o sphere.o stdize.o inference.o \
 	brush_init.o brush_cbacks.o brush.o paint.o brush_send.o \
 	help.o prt_plotwin.o subset.o vc_lists.o exclusion.o \
 	plot_once.o plot1d.o texture.o ash1d.o move_points.o \
@@ -575,8 +583,8 @@ JOINTOBJ = xgobi_init.o pipeline.o read_array.o \
 RPCSRC =
 RPCOBJ =
 
-XGOBISRC = xgobi.c $(JOINTSRC) $(RPCSRC)
-XGOBIOBJ = xgobi.o $(JOINTOBJ) $(RPCOBJ)
+XGOBISRC = xgobi.c $(JOINTSRC) $(RPCSRC) $(CORBASRC)
+XGOBIOBJ = xgobi.o $(JOINTOBJ) $(RPCOBJ) $(CORBAOBJ)
 
 XGVISSRC = xgvis.c xgv_dissim.c xgv_mds.c \
 	xgv_molecule.c xgv_read_data.c xgv_help.c \
@@ -587,9 +595,13 @@ XGVISOBJ = xgvis.o xgv_dissim.o xgv_mds.o \
 
 all:: xgvis xgobi
 
+foo:
+	echo $(USRLIBDIR)
+	echo "$(LDPRELIBS) $(origin LDPRELIBS)"
+
 xgobi:  $(XGOBIOBJ)
 	  $(RM) $@
-	 $(CCLINK) -o $@ $(LDOPTIONS)  $(XGOBIOBJ)   $(LDLIBS)  $(LOCAL_LIBRARIES) $(EXTRA_LOAD_FLAGS)
+	 $(CCLINK) -o $@ $(LDOPTIONS)  $(XGOBIOBJ)   $(LDLIBS)  $(CORBA_LIBRARIES) $(LOCAL_LIBRARIES) $(EXTRA_LOAD_FLAGS)
 
 clean::
 	 $(RM) xgobi

@@ -17,12 +17,14 @@
 # building xgobi as we hand it out, this shouldn't bother
 # you at all.
              CC = cc
+      CCOPTIONS = -xansi -n32 -woff 1116
+
+            #CC = gcc
+     #CCOPTIONS = -ansi -w
+
              LD = 
      CDEBUGFLAGS = -g
 #EXTRA_LDOPTIONS = -static
-      # for gcc
-      #CCOPTIONS = -ansi -w -DDEBUG
-       CCOPTIONS = -xansi -DDEBUG
 
 /**/#  Choose a random number generator, random or drand48
                R = USE_RANDOM
@@ -65,7 +67,7 @@ JOINTSRC = xgobi_init.c pipeline.c read_array.c \
 	initialize.c widgets.c callbacks.c getfname.c \
 	xyplot.c make_axes.c line_editor.c missing.c  \
 	spin_cbacks.c spin.c scaling.c scale_cbacks.c \
-	identify.c var_panel.c transform.c stdize.c inference.c \
+	identify.c var_panel.c transform.c sphere.c stdize.c inference.c \
 	brush_init.c brush_cbacks.c brush.c paint.c brush_send.c \
 	help.c prt_plotwin.c subset.c vc_lists.c exclusion.c \
 	plot_once.c plot1d.c texture.c ash1d.c move_points.c \
@@ -81,7 +83,7 @@ JOINTOBJ = xgobi_init.o pipeline.o read_array.o \
 	initialize.o widgets.o callbacks.o getfname.o \
 	xyplot.o make_axes.o line_editor.o missing.o  \
 	spin_cbacks.o spin.o scaling.o scale_cbacks.o \
-	identify.o var_panel.o transform.o stdize.o inference.o \
+	identify.o var_panel.o transform.o sphere.o stdize.o inference.o \
 	brush_init.o brush_cbacks.o brush.o paint.o brush_send.o \
 	help.o prt_plotwin.o subset.o vc_lists.o exclusion.o \
 	plot_once.o plot1d.o texture.o ash1d.o move_points.o \

@@ -2114,19 +2114,20 @@ set_tourvar(xgobidata *xg, int varno)
   /*
    * keep_sphered data updated to active variables
   */
-        if (xg->is_princ_comp && xg->ncols_used >= 2)
+/*        if (xg->is_princ_comp && xg->ncols_used >= 2)
         {
-          if (update_vc_active_and_do_svd(xg))
-            spherize_data(xg);
+          if (update_vc_active_and_do_svd(xg, xg->numvars_t, xg->tour_vars))
+            spherize_data(xg, xg->numvars_t, xg->numvars_t, xg->tour_vars);
           else
             copy_tform_to_sphered(xg);
-        }  
+        }  */
   /*
    * Cater for the case of principal components or optimize is on, when
    * the behaviour should be to completely blank out the variable
    * immediately, rather than fade it out.
   */
-        if (xg->is_princ_comp || xg->is_pp_optimz)
+/*        if (xg->is_princ_comp || xg->is_pp_optimz)*/
+        if (xg->is_pp_optimz)
         {
           xg->u[0][varno] = 0.0;
           norm(xg->u[0], xg->ncols_used);
@@ -2169,8 +2170,8 @@ set_tourvar(xgobidata *xg, int varno)
          * zero tau to force new tour from current position
         */
         zero_tau(xg);
-        if (!xg->is_princ_comp)
-        {
+/*        if (!xg->is_princ_comp)
+        {*/
           set_fading_var(2);
           set_sens_localscan(false);
           reset_backtrack_cmd(false, false, false, false);
@@ -2179,7 +2180,7 @@ set_tourvar(xgobidata *xg, int varno)
             set_ready_to_stop_now(0);
             set_counting_to_stop(1);
           }
-        }
+/*        }*/
       }
       if (xg->tour_cont_fact == infinite)
         xg->new_direction_flag = True;
@@ -2191,22 +2192,22 @@ set_tourvar(xgobidata *xg, int varno)
       {
         found = add_variable(xg, varno);
   
-        if (xg->is_princ_comp && xg->ncols_used >= 2)
+/*        if (xg->is_princ_comp && xg->ncols_used >= 2)
         {
-          if (update_vc_active_and_do_svd(xg))
-            spherize_data(xg);
+          if (update_vc_active_and_do_svd(xg, xg->numvars_t, xg->tour_vars))
+            spherize_data(xg, xg->numvars_t, xg->numvars_t, xg->tour_vars);
           else
             copy_tform_to_sphered(xg);
-        }
-        if (xg->is_princ_comp && check_singular_vc())
+        }*/
+/*        if (xg->is_princ_comp && check_singular_vc())
         {
           i = 0;
-          found = 0;
+          found = 0;*/
           /* take the variable out of the sphered group - 
            * warning message is generated. awful programming
            * but this is the way that it is set up currently.
           */
-          while (!found)
+/*          while (!found)
           {
             if (varno == xg->tour_vars[i])
             {
@@ -2217,15 +2218,15 @@ set_tourvar(xgobidata *xg, int varno)
               found = 1;
             }
             i++;
-          } /* end while */
-          if (update_vc_active_and_do_svd(xg))
-            spherize_data(xg);
+          } * end while *
+          if (update_vc_active_and_do_svd(xg, xg->numvars_t, xg->tour_vars))
+            spherize_data(xg, xg->numvars_t, xg->numvars_t, xg->tour_vars);
           else
             copy_tform_to_sphered(xg);
         }
         else
-        {
-          if (xg->is_princ_comp)
+        {*/
+/*          if (xg->is_princ_comp)
           {
             init_basis(xg);
             update_lims(xg);
@@ -2235,7 +2236,7 @@ set_tourvar(xgobidata *xg, int varno)
             plot_once(xg);
             tour_var_lines(xg);
             reset_var_labels(xg, !xg->is_princ_comp);
-          }
+          }*/
           refresh_vbox(xg, varno, 1);
           
           /* recalculate section variables */
@@ -2264,7 +2265,7 @@ set_tourvar(xgobidata *xg, int varno)
     
           if (xg->tour_cont_fact == infinite)
             xg->new_direction_flag = True;
-        }
+/*        }*/
       }
     }
     if (tour_on(xg) == True)

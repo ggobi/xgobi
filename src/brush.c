@@ -239,7 +239,9 @@ brush_once(xgobidata *xg, Boolean force)
   if (xg->is_point_painting) {
     changed = active_paint_points(xg);
     if ((changed || force) && xg->sync_brush) {
-      if ( xg->link_glyph_brushing || xg->link_color_brushing)
+      if (xg->link_glyph_brushing ||
+          xg->link_color_brushing ||
+          xg->link_erase_brushing)
       {
         announce_brush_data(xg);
 
@@ -429,13 +431,17 @@ brush_button(Widget w, xgobidata *xg, XEvent *evnt)
           changed = brush_once(xg, True);
 
           if (xg->is_point_painting) {
-            if (xg->link_glyph_brushing || xg->link_color_brushing)
+            if (xg->link_glyph_brushing ||
+                xg->link_color_brushing ||
+                xg->link_erase_brushing)
+            {
               XtOwnSelection( (Widget) xg->workspace,
                 (Atom) XG_NEWPAINT,
                 (Time) CurrentTime,
                 (XtConvertSelectionProc) pack_brush_data,
                 (XtLoseSelectionProc) pack_brush_lose ,
                 (XtSelectionDoneProc) pack_brush_done );
+            }
           }
 
           /* If line brushing, update linked lines */
@@ -499,7 +505,9 @@ brush_button(Widget w, xgobidata *xg, XEvent *evnt)
              * ... but let's try only doing it for async brushing ...
             */
             if (!xg->sync_brush && asyncchanged) {
-              if (xg->link_glyph_brushing || xg->link_color_brushing)
+              if (xg->link_glyph_brushing ||
+                  xg->link_color_brushing ||
+                  xg->link_erase_brushing)
               {
                 announce_brush_data(xg);
 

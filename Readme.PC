@@ -33,3 +33,9 @@ Comments from Di Cook, on getting this to work:
     
 Then I start the X server, and double-click on the xgobi.bat file icon.
 
+XGobi and gtk:
+
+We're working on a port (and redesign) of xgobi using gtk (see
+www.gtk.org) and there does exist a port of gtk to Windows.  So
+it should be possible, in a few months, to run xgobi on a PC
+without the need for an X server.

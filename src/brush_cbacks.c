@@ -133,7 +133,9 @@ XtCallbackProc
 br_update_cback(Widget w, xgobidata *xg, XtPointer callback_data)
 {
   if (xg->plot_the_points) {
-    if (xg->link_glyph_brushing || xg->link_color_brushing)
+    if (xg->link_glyph_brushing ||
+        xg->link_color_brushing ||
+        xg->link_erase_brushing)
     {
       XtOwnSelection( (Widget) xg->workspace,
         (Atom) XG_ROWSINPLOT,
