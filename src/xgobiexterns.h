@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 
+extern Boolean plotted_var_missing(int from, int to, xgobidata *xg);
+
 extern Boolean set_plot1dvar(xgobidata *, int);
 extern Boolean set_xyplotxvar(xgobidata *, int);
 extern Boolean set_xyplotyvar(xgobidata *, int);

@@ -45,7 +45,7 @@ static int *avec, *bvec;
 static int le_start = -1, le_nearest_pt = -1, le_nearest_line = -1;
 
 /* Draw lines to missing/imputed values or don't */
-static Boolean plot_imputed_values = True;
+Boolean plot_imputed_values = True;
 
 
 /* --------- Dynamic allocation section ----------- */
@@ -231,7 +231,7 @@ sort_connecting_lines(xgobidata *xg)
   XtFree((XtPointer) indx);
 }
 
-static Boolean
+Boolean
 plotted_var_missing(int from, int to, xgobidata *xg)
 {
   Boolean missing = False;

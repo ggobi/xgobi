@@ -229,6 +229,7 @@ print_plot_window(Widget w, int type, xgobidata *xg)
   time_t now;
   char *xgobidir;
   char message[MSGLENGTH];
+  Boolean doit;
 /*
   XImage *xi;
   unsigned short int pixout;
@@ -591,6 +592,7 @@ print_plot_window(Widget w, int type, xgobidata *xg)
     if ((xg->connect_the_points || xg->plot_the_arrows) && xg->nlines > 0)
     {
       int from, to;
+      extern  Boolean plot_imputed_values;
       float xx, yy;
       (void) fprintf(psfile, "%% ln: red green blue x1 y1 x2 y2\n");
       (void) fprintf(psfile, "%%  draw line from (x1,y1) to (x2,y2)\n");
@@ -623,6 +625,22 @@ print_plot_window(Widget w, int type, xgobidata *xg)
       {
         from = xg->connecting_lines[i].a - 1;
         to = xg->connecting_lines[i].b - 1;
+
+/* dfs, testing */
+        /* If not plotting imputed values, and one is missing, skip it */
+        doit = True;
+        if (!plot_imputed_values && plotted_var_missing(from, to, xg))
+          doit = False;
+        /* If either from or to is excluded, move on */
+        else if (xg->ncols == xg->ncols_used) {
+          if (xg->clusv[(int)GROUPID(from)].excluded)
+            doit = False;
+          else if (xg->clusv[(int)GROUPID(to)].excluded)
+            doit = False;
+        }
+        if (!doit)
+          continue;
+
         if (!xg->erased[from] && !xg->erased[to]) {
           (void) fprintf(psfile, "%f %f %f 1 %f %f %f %f ln\n",
             (float) rgb_lines[i].red / (float) 65535,
