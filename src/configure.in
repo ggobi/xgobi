@@ -1,0 +1,138 @@
+dnl Process this file with autoconf to produce a configure script.
+
+dnl find some file in the XGobi distribution as a sanity check.
+AC_INIT(xgv_stress.c)
+
+dnl indicate that we are going to do substitutions for the corresponding .in files
+dnl and generate the headers.
+AC_CONFIG_HEADER(config.h)
+
+dnl Checks for several standard programs for compiling.
+AC_PROG_CXX
+AC_PROG_CC
+AC_PROG_CPP
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PROG_MAKE_SET
+
+dnl AC_PROG_LEX
+dnl AC_PROG_YACC
+
+dnl XGobi needs this, so we arrange to compute the current directory
+dnl for the installation and provide it in config.h included by several
+dnl C source files (conditionally based on HAVE_CONFIG_H)
+AC_DEFINE_UNQUOTED(DEFAULTDIR, "`pwd`")
+
+
+dnl Compute how the compiler can generate dependencies (i.e. -M or -xM)
+dnl See aclocal.m4
+XGOBI_C_DEPENDS()
+
+dnl Compute the host information such as OS, hardware, etc.
+dnl Need this to handle the HP appropriately.
+dnl Causes grief with config.sub.
+dnl AC_CANONICAL_HOST
+
+case "${host_os}" in
+  hp*) forHP=true;;
+esac
+
+
+ dnl Test for HP OS.
+AC_XGOBI_HP_TEST
+
+dnl Handle HPUX peculiarities.
+if test -n "${forHP}" ; then
+    if test -z "${useRand48}" ; then  
+        DEFINES="${DEFINES} -DUSE_DRAND48";  
+    fi
+    CFLAGS="${CFLAGS} -Aa -D_HPUX_SOURCE -DXLIB_ILLEGAL_ACCESS"
+fi
+
+
+
+dnl This is dynamically configurable at the make command level
+dnl rather than being hard-coded at configuration time. But it is also
+dnl defined at configuration time via the --enable-drand48 argument to configure.
+AC_ARG_ENABLE(drand48,
+     [ --enable-drand48       use the drand48 random number generator],
+     [ if test "${enableval}" = "yes" ; then
+            DEFINES="${DEFINES} -DUSE_DRAND48";
+            useRand48=true;
+       fi],
+      [  echo "No random generator specified, using 'random'"])
+
+AC_SUBST(DEFINES)
+
+
+
+
+AC_ARG_ENABLE(rpc,
+      [--enable-rpc         use Remote Procedure Call to communicate with ArcView ],
+      [
+        if test "${enableval}" = yes ; then
+          DEFINES="${DEFINES} -DRPC_USED" ;
+          use_RPC=yes;
+        fi
+      ])
+
+
+
+AC_ARG_ENABLE(corba,
+    [--enable-corba        make XGobi available as a CORBA server],
+    [
+     if test "${enableval}" = yes; then
+       if test -n "${use_RPC}" ; then
+         echo "RPC and CORBA are not currently compatible. Choose one or the other ${use_RPC}." ;
+         exit 1;
+       fi
+       use_CORBA=true;
+dnl Write the IDL rules, the additional files, etc.
+        AC_SUBST(CORBASRC)
+        AC_SUBST(CORBAOBJ)
+     fi
+    ])
+
+
+dnl Checks for header files.
+AC_PATH_XTRA
+dnl if test -z "${no_x}"; then
+dnl   X_LIBS="${X_LIBS}"
+dnl fi
+
+
+AC_HEADER_STDC
+AC_CHECK_HEADERS(fcntl.h sys/time.h unistd.h)
+
+dnl Look for some of the libraries that are needed.
+dnl These will end up in the LIBS variable. 
+
+dnl Look for erf in the math library -lm:
+AC_CHECK_LIB(m, erf)
+
+dnl Look for a routine in the X11 library (-lX11), XInternAtom should
+dnl be somewhat unique!
+AC_CHECK_LIB(X11, XInternAtom,,,${X_LIBS})
+
+dnl Testing for Xt by looking for XtAppInitialize.
+dnl Note that we tag X_LIBS onto the directories so that we can ensure 
+dnl the linking will work.
+AC_CHECK_LIB(Xt, XtAppInitialize, ,, ${X_LIBS})
+
+dnl Testing for Xaw
+AC_CHECK_LIB(Xaw, XawInitializeWidgetSet, ,,${X_LIBS})
+
+
+dnl Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_TYPE_MODE_T
+AC_TYPE_SIZE_T
+AC_HEADER_TIME
+
+dnl Checks for library functions.
+AC_TYPE_SIGNAL
+dnl AC_CHECK_FUNCS(ftime gethostname select)
+
+
+dnl Write the configured versions of Makefile.in and Makeconf.in
+AC_OUTPUT(Makefile Makeconf  Makefile.rules Makefile.corba)

@@ -1,0 +1,109 @@
+all: xgobi xgvis
+
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+include Makeconf
+
+JOINTSRC = xgobi_init.c pipeline.c read_array.c \
+	initialize.c widgets.c callbacks.c getfname.c \
+	xyplot.c make_axes.c line_editor.c missing.c  \
+	spin_cbacks.c spin.c scaling.c scale_cbacks.c \
+	identify.c var_panel.c transform.c stdize.c inference.c \
+	brush_init.c brush_cbacks.c brush.c paint.c brush_send.c \
+	help.c prt_plotwin.c subset.c vc_lists.c exclusion.c \
+	plot_once.c plot1d.c texture.c ash1d.c move_points.c \
+	show_message.c smooth.c smooth_fns.c smoothsk.c pspline.c \
+	save_data.c new_data.c read_data.c jitter.c parcoords.c utils.c \
+	tour_init.c tour_util.c tour.c tour_cbacks.c tour_send.c gt_ctls.c \
+	tour_pp.c svd.c kernel.c \
+	legendre.c hermite.c natrl_hermite.c de_indices.c \
+	central_mass.c holes.c skewness.c \
+	tour_section.c corr.c corr_index.c corr_pursuit.c corr_util.c \
+	DrawingA.c
+JOINTOBJ = xgobi_init.o pipeline.o read_array.o \
+	initialize.o widgets.o callbacks.o getfname.o \
+	xyplot.o make_axes.o line_editor.o missing.o  \
+	spin_cbacks.o spin.o scaling.o scale_cbacks.o \
+	identify.o var_panel.o transform.o stdize.o inference.o \
+	brush_init.o brush_cbacks.o brush.o paint.o brush_send.o \
+	help.o prt_plotwin.o subset.o vc_lists.o exclusion.o \
+	plot_once.o plot1d.o texture.o ash1d.o move_points.o \
+	show_message.o smooth.o smooth_fns.o smoothsk.o pspline.o \
+	save_data.o new_data.o read_data.o jitter.o parcoords.o utils.o \
+	tour_init.o tour_util.o tour.o tour_cbacks.o tour_send.o gt_ctls.o \
+	tour_pp.o svd.o kernel.o \
+	legendre.o hermite.o natrl_hermite.o de_indices.o \
+	central_mass.o holes.o skewness.o \
+	tour_section.o corr.o corr_index.o corr_pursuit.o corr_util.o \
+	DrawingA.o
+
+
+
+include Makefile.corba
+
+
+XGOBISRC = xgobi.c $(JOINTSRC) $(RPCSRC) $(CORBASRC)
+XGOBIOBJ = xgobi.o $(JOINTOBJ) $(RPCOBJ) $(CORBAOBJ)
+
+
+XGVISSRC = xgvis.c xgv_dissim.c xgv_mds.c \
+	xgv_molecule.c xgv_read_data.c xgv_help.c \
+	xgv_stress.c xgv_cbacks.c xgv_widgets.c $(JOINTSRC)
+
+XGVISOBJ = xgvis.o xgv_dissim.o xgv_mds.o \
+	xgv_molecule.o xgv_read_data.o xgv_help.o \
+	xgv_stress.o xgv_cbacks.o xgv_widgets.o $(JOINTOBJ)
+
+all: xgvis xgobi
+
+
+xgobi: $(XGOBIOBJ)
+	$(CC) -o $@ $(XGOBIOBJ) $(CORBA_LIBRARIES) $(ALL_LIBS)
+
+xgvis: $(XGVISOBJ)
+	$(CC) -o $@ $(XGVISOBJ) $(ALL_LIBS)
+
+purexgobi: xgobi.o $(JOINTOBJ)
+	purify -cache-dir=/tmp  -always-use-cache-dir=yes \
+	${CC} ${CFLAGS} ${LD} ${LDOPTIONS} -o xgobi ${XGOBIOBJ} ${LOCAL_LIBRARIES} \
+	${SYS_LIBRARIES}
+
+purexgvis: xgvis.o $(XGVISOBJ)
+	purify -cache-dir=/tmp  -always-use-cache-dir=yes \
+	${CC} ${CFLAGS} ${LD} ${LDOPTIONS} -o xgvis ${XGVISOBJ} ${LOCAL_LIBRARIES} \
+	${SYS_LIBRARIES}
+
+
+
+rpc_dceclient_sstub.o : rpc_dceclient_sstub.c
+
+rpc_dceclient_cstub.o : rpc_dceclient_cstub.c
+
+rpc_dce_sstub.o : rpc_dce_sstub.c
+
+rpc_dce_cstub.o : rpc_dce_cstub.c
+
+
+rpc_dceclient.h rpc_dceclient_cstub.c rpc_dceclient_sstub.c : rpc_dceclient.idl rpc_dceclient.acf
+	idl rpc_dceclient.idl -keep c_source
+
+rpc_dce.h rpc_dce_cstub.c rpc_dce_sstub.c : rpc_dce.idl rpc_dce.acf
+	idl rpc_dce.idl -keep c_source
+
+
+clean:
+	for f in  $(XGOBIOBJ) $(XGVISOBJ) ; do \
+	 if [ -f $$f ] ; then rm $$f ; fi \
+	done
+
+distclean: clean
+	for f in  xgvis xgobi config.h Makeconf Makefile configure xgobivars.h  ; do \
+	  if [ -f $$f ] ; then rm $$f ; fi \
+	done
+
+
+include Makefile.rules
+
+include Makefile.dep
+
