@@ -22,6 +22,9 @@ XGVIS_ Widget dims_left, dims_right;
 #define METRIC    0
 #define NONMETRIC 1
 
+#define KRUSKALSHEPARD 0
+#define CLASSIC        1
+
 #define USER_SUPPLIED 0
 #define LINK 1
 #define ADJACENCY 2
@@ -46,19 +49,31 @@ XGVIS_ Widget dist_cmd, dist_popup, dist_mgr, dist_types[NDISTTYPES] ;
 XGVIS_ int dist_type INIT(= 0) ;
 
 XGVIS_ enum {deflt, within, between, anchorscales, anchorfixed} mds_group_ind;
+XGVIS_ double mds_stepsize  INIT(= 0.02);
 XGVIS_ double mds_power  INIT(= 1.0);
-XGVIS_ double mds_weightpow INIT(= 0.0);
+XGVIS_ double mds_distpow INIT(= 1.0);
 XGVIS_ double mds_lnorm  INIT(= 2.0);
-XGVIS_ int mds_n_iters  INIT(= 1);
-XGVIS_ double mds_stepsize  INIT(= 0.1);
+XGVIS_ double mds_distpow_over_lnorm  INIT(= 0.5);
+XGVIS_ double mds_lnorm_over_distpow  INIT(= 2.0);
+XGVIS_ double mds_weightpow INIT(= 0.0);
+XGVIS_ double mds_within_between INIT(=1.0);
+XGVIS_ double mds_rand_select_val INIT(=1.0);
+XGVIS_ double mds_rand_select_new INIT(=FALSE);
+XGVIS_ double mds_perturb_val INIT(=1.0);
 XGVIS_ double mds_threshold_high  INIT(= 0.0);
 XGVIS_ double mds_threshold_low  INIT(= 0.0);  /* what initial value? */
-XGVIS_ int mds_dims INIT(= 3);
+XGVIS_ int    mds_dims INIT(= 3);
 
 /* Used in scaling during each mds loop; set in reset_data */
-XGVIS_ double distance_factor;
-XGVIS_ double *distance_vector, *distance_vector_sort;
-XGVIS_ double *config_distances;
+XGVIS_ double *config_dist   INIT(= NULL); /* spave vs time: store configuration distances to save recalculation */
+XGVIS_ double *raw_dist      INIT(= NULL); /* pointer, a vector version of dist.data */
+XGVIS_ double *weights       INIT(= NULL); /* formed only when mds_weightpow != 0. */
+XGVIS_ double *trans_dist    INIT(= NULL); /* transformed dissimilarities: power (metric), isotonic (nonmetric) */
+XGVIS_ int *trans_dist_index INIT(= NULL); /* index array for sort of raw_dist */
+XGVIS_ int *bl               INIT(= NULL); /* blocklengths for isotonic regression */
+XGVIS_ double *bl_w          INIT(= NULL); /* blockweights for isotonic regression (only when mds_weightpow != 0.) */
+XGVIS_ double *rand_sel      INIT(= NULL); /* random selection probabilities (only when mds_rand_select != 1.) */
+
 XGVIS_ int ndistances;
 XGVIS_ int num_active_dist;
 
@@ -91,4 +106,5 @@ XGVIS_ char pcolorname[128];
 XGVIS_ char lcolorname[128];
 XGVIS_ char glyphname[128];
 
-XGVIS_ int scaling_method INIT(= METRIC);
+XGVIS_ int metric_nonmetric INIT(= METRIC);
+XGVIS_ int KruskalShepard_classic INIT(= KRUSKALSHEPARD);

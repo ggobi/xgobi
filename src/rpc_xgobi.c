@@ -1111,7 +1111,7 @@ CHAR_TYPE *instr, *outstr;
           mv_missing_values_present, missingp,
           mv_is_missing_values_xgobi, mv_nmissing,
           nr, rowp, nc + 1, colp,
-  	  0, (connect_lines *) NULL, &xgobi, prog_shell))
+          0, (connect_lines *) NULL, &xgobi, prog_shell, True))
     {
        sprintf (outstr, "14.02");
        RETURN;
@@ -1851,7 +1851,7 @@ CHAR_TYPE *instr, *outstr;
           mv_missing_values_present, missingp,
           mv_is_missing_values_xgobi, mv_nmissing,
           nr, rowp, nc + 1, colp,
-  	  0, (connect_lines *) NULL, &xgobi, prog_shell))
+  	  0, (connect_lines *) NULL, &xgobi, prog_shell, True))
     {
        sprintf (outstr, "24.02");
        RETURN;
@@ -2606,7 +2606,7 @@ CHAR_TYPE *instr, *outstr;
           mv_missing_values_present, missingp,
           mv_is_missing_values_xgobi, mv_nmissing,
           nr, rowp, nc + 1, colp,
-  	  0, (connect_lines *) NULL, &xgobi, prog_shell))
+  	  0, (connect_lines *) NULL, &xgobi, prog_shell, True))
     {
        sprintf (outstr, "34.02");
        RETURN;
@@ -3770,7 +3770,7 @@ CHAR_TYPE *instr, *outstr;
           mv_missing_values_present, missingp,
           mv_is_missing_values_xgobi, mv_nmissing,
           nr, rowp, nc + 1, colp,
-  	  0, (connect_lines *) NULL, &xgobi, prog_shell))
+  	  0, (connect_lines *) NULL, &xgobi, prog_shell, True))
     {
        sprintf (outstr, "54.02");
        RETURN;

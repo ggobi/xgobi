@@ -591,7 +591,7 @@ read_vgroups(char *data_in, Boolean init, xgobidata *xg)
  * Read in the grouping numbers for joint scaling of variables
 */
 {
-  static char *suffixes[] = {".vgroups"};
+  static char *suffixes[] = {".vgroups", ".vgroup"};
   int itmp, i, j;
   Boolean found = False;
   FILE *fp;
@@ -602,7 +602,7 @@ read_vgroups(char *data_in, Boolean init, xgobidata *xg)
   }
 
   if (data_in != NULL && data_in != "" && strcmp(data_in, "stdin") != 0)
-    if ( (fp = open_xgobi_file(data_in, 1, suffixes, "r", true)) != NULL)
+    if ( (fp = open_xgobi_file(data_in, 2, suffixes, "r", true)) != NULL)
       found = True;
 
   if (found) {

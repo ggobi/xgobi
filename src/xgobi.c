@@ -694,7 +694,7 @@ main(int argc, char *argv[])
  *  missingpflag, missingp, mv_is_missing_values_xgobi, mv_nmissing,
  *  nr, rowp, nc, colp,
  *  nlines, connecting_lines,
- *  xg, parent)
+ *  xg, parent, Boolean plot)
 */
 
 /*
@@ -715,7 +715,7 @@ main(int argc, char *argv[])
     False, (short **) NULL, False, 0,
     (int) NULL, rowl, (int) NULL, coll,
     (int) NULL, (connect_lines *) NULL,
-    &xgobi, (Widget) NULL) == 0)
+    &xgobi, (Widget) NULL, True) == 0)
   {
     return(0);
   }

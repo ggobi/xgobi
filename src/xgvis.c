@@ -85,7 +85,7 @@ void  xfer_brushinfo (xgobidata *xg)
 {
 }
 
-extern void mds_once(Boolean, Boolean, FILE *, FILE *);
+extern void mds_once(Boolean);
 extern void initialize_data(int argc, char *argv[]);
 extern void reset_data(void);
 extern double distance(double *, double *, int, double);
@@ -101,7 +101,7 @@ copy_pos_to_raw(xgobidata *xg)
   int i, j;
 
   for (i = 0; i < pos.nrows; i++) {
-    for (j = 0; j < pos.ncols; j++)
+    for (j = 0; j < pos.ncols-1; j++)
       xg->raw_data[i][j] = (float) pos.data[i][j];
   }
 }
@@ -183,7 +183,7 @@ RunWorkProcs(void *dummyArgc)
     if (xgv_is_running)  /* is mds running? */
     {
       keepgoing = True;
-      mds_once(True, False, NULL, NULL);
+      mds_once(True);
 
       update_plot(&xgobi);
     }
@@ -402,7 +402,7 @@ Widget parent
     False, (short **) NULL, False, 0,
     pos.nrows, rowlab, pos.ncols, col_name,
     xg_nlines, xg_lines,
-    &xgobi, shell) == 0)
+    &xgobi, shell, False /*don't plot yet*/) == 0)
   {
     return(0);
   }
@@ -422,6 +422,15 @@ Widget parent
       XtFree((char *) fdata[i]);
     XtFree((char *) fdata);
 
+    /* addsuffix = True */
+    if (strlen(pcolorname) == 0) sprintf(pcolorname, "%s", xgv_basename);
+    if (strlen(lcolorname) == 0) sprintf(lcolorname, "%s", xgv_basename);
+    if (strlen(glyphname) == 0) sprintf(glyphname, "%s", xgv_basename);
+
+    read_point_colors(pcolorname, True, True, &xgobi);
+    read_point_glyphs(glyphname, True, True, &xgobi);
+    read_line_colors(lcolorname, True, True, &xgobi);
+
     set_vgroups(&xgobi);
     update_lims(&xgobi);
     update_world(&xgobi);
@@ -431,8 +440,11 @@ Widget parent
     init_tickdelta(&xgobi);
     init_ticks(&xgobi.xy_vars, &xgobi);
     plot_once(&xgobi);
+    /* seems like a kludge, but there's another plot_once called
+     * async afterwards which makes lines not show up */
+    xgobi.got_new_paint = True;
 
-    mds_once(False, False, NULL, NULL);
+    mds_once(False);
     draw_stress();  /* initialize the stress plot */
 
     /* initialize the dissimilarity plot */
@@ -446,16 +458,9 @@ Widget parent
       XtNbitmap, (Pixmap) rightarr,
       XtNborderColor, (Pixel) appdata.fg,
       NULL);
-/*
- * September 16, commenting this out.  Andreas and I have
- * no idea what it's doing there, and we'd like to find out.
-    {
-      extern Widget *tool_menu_btn;
-      XtSetSensitive(tool_menu_btn[0], False);
-    }
-*/
 
     /* addsuffix = True */
+/*
     if (strlen(pcolorname) == 0) sprintf(pcolorname, "%s", xgv_basename);
     if (strlen(lcolorname) == 0) sprintf(lcolorname, "%s", xgv_basename);
     if (strlen(glyphname) == 0) sprintf(glyphname, "%s", xgv_basename);
@@ -463,6 +468,7 @@ Widget parent
     read_point_colors(pcolorname, True, True, &xgobi);
     read_point_glyphs(glyphname, True, True, &xgobi);
     read_line_colors(lcolorname, True, True, &xgobi);
+*/
 
     /*
      * I can't seem to make this work with resource files, so

@@ -486,11 +486,11 @@ get_data_from_parent(char *data_in, float **datap,
 
 int
 make_xgobi(Boolean datapflag, char *data_in, float **datap, char *xgobi_title,
-Boolean missingpflag, short **missingp, Boolean mv_is_missing_values_xgobi,
-int mv_nmissing,
-int nr, char **rowp, int nc, char **colp,
-int nlines, connect_lines *connecting_lines,
-xgobidata *xg, Widget parent)
+ Boolean missingpflag, short **missingp, Boolean mv_is_missing_values_xgobi,
+ int mv_nmissing,
+ int nr, char **rowp, int nc, char **colp,
+ int nlines, connect_lines *connecting_lines,
+ xgobidata *xg, Widget parent, Boolean plotp)
 
 /*
   Boolean datapflag  * calling program supplies pointer to data? *
@@ -966,7 +966,8 @@ xgobidata *xg, Widget parent)
     update_nrgroups_in_plot(xg);
     reset_rows_in_plot(xg, True);
   }
-  plot_once(xg);
+  if (plotp)
+    plot_once(xg);
   refresh_vlab(xg->xy_vars.x, xg);
   refresh_vlab(xg->xy_vars.y, xg);
 

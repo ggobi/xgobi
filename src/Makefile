@@ -584,8 +584,6 @@ XGVISOBJ = xgvis.o xgv_dissim.o xgv_qsort.o xgv_mds.o \
 	xgv_molecule.o xgv_read_data.o xgv_help.o \
 	xgv_stress.o xgv_cbacks.o xgv_widgets.o $(JOINTOBJ)
 
-#	xgv_qsort.c isotonic.c xgv_mds_a.c xgv_mds \
-
 all:: xgvis xgobi
 
 foo:

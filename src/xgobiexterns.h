@@ -595,7 +595,7 @@ extern void reset_tform(xgobidata *);
 extern Boolean reread_dat(char *, xgobidata *);
 extern void read_new_data(Widget w, xgobidata *xg);
 extern int find_pgsize(int, int);
-extern int make_xgobi(Boolean, char *, float **, char *, Boolean, short **, Boolean, int, int, char **, int, char **, int, connect_lines *, xgobidata *, Widget);
+extern int make_xgobi(Boolean, char *, float **, char *, Boolean, short **, Boolean, int, int, char **, int, char **, int, connect_lines *, xgobidata *, Widget, Boolean plot_p);
 extern void set_sens_direction(Boolean);
 extern FILE *open_file(char *, char *, char *);
 extern FILE *open_xgobi_file(char *, int, char **, char *, Boolean);

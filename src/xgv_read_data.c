@@ -45,13 +45,10 @@ void set_dist_matrix_from_pos(struct array *, struct array *, double);
 void set_dist_matrix_from_pos_dot(struct array *, struct array *, int);
 double vect_distance(double *, double *, int, int);
 int read_labels(char *, char ***, int);
-void symmetrize_dists(struct array *);
+void symmetrize_dists(void);
 void report_asymmetry(struct array *);
 double drandval(int);
 void reset_data(void);
-
-extern double distance(double *, double *, int, double);
-extern void update_dissim_plot(void);
 
 /* Macro. */
 /* #define XtRealloc(x,y) (((x)==NULL)?XtMalloc((y)):XtRealloc((x),(y))) */
@@ -94,6 +91,41 @@ scale_array_max(struct array *arrp, int nr, int nc)
 
 
 void
+scale_array_mean(struct array *arrp, int nr, int nc)
+{
+  extern double delta;  /* in mds.c */
+  double mean, dsum = 0.0;
+  double max, min, scl;
+  int i, j;
+
+  if (arrp->nrows < nr || arrp->ncols < nc) {
+    fprintf(stderr, "This array is smaller than nr or nc\n");
+  } else {
+
+    for (j=0; j<nc; j++) {
+      dsum = 0.0;
+      for (i=0; i<nr; i++) dsum += arrp->data[i][j];
+      mean = dsum / nr;
+      for (i=0; i<nr; i++) arrp->data[i][j] -= mean;
+    }
+
+    for (j=0; j<nc; j++) {
+      max = -1E100;  min = 1E100;
+      for (i=0; i<nr; i++) {
+        if (arrp->data[i][j] < min) min = arrp->data[i][j];
+        if (arrp->data[i][j] > max) max = arrp->data[i][j];
+      }
+      if((max-min)<1E-100) 
+	printf("scale_array_mean: max-min too small = %e, nr=%d, nc=%d, j=%d\n",max-min,nr,nc,j);
+      if(max > -min) scl = max; else scl = -min;
+      for (i=0; i<nr; i++) 
+        arrp->data[i][j] = arrp->data[i][j] / scl * 0.5;
+    }
+  }
+}
+
+
+void
 print_array(struct array *arrp, char *fname)
 {
   int i, j;
@@ -112,6 +144,7 @@ print_array(struct array *arrp, char *fname)
   }
   fflush(fp);
 }
+
 
 /* General routine for reading an array from a file (given by name). */
 /* Expects array structure to never have been allocated before. */
@@ -270,7 +303,7 @@ read_array_struct(char *data_in, struct array *arrp, Boolean allow_na)
 void
 initialize_data(int argc, char *argv[])
 {
-  int j, biggest_link;
+  int i, j, biggest_link;
   char fname[128];
   struct stat buf;
   Boolean found;
@@ -417,15 +450,8 @@ initialize_data(int argc, char *argv[])
    * If there is a position matrix, scale the values overall
    * onto [-1, 1]
   */
-  if (pos_orig.nrows > 0) {
+  if (pos_orig.nrows > 0)
     scale_array_mean(&pos_orig, pos_orig.nrows, pos_orig.ncols);
-  }
-
-/* If a distance matrix was passed in, let's symmetrize it. */
-/*
-  if (dist_orig.nrows != 0)
-    symmetrize_dists(&dist_orig);
-*/
 
   if (dist_orig.nrows != 0)
     report_asymmetry(&dist_orig);
@@ -489,7 +515,10 @@ initialize_data(int argc, char *argv[])
     fprintf(stderr, "Edges file must have either 2 or 3 columns!\n");
     do_exit(-1);
   }
-}
+
+  ndistances = dist_orig.nrows * dist_orig.ncols;
+
+} /* initialize_data(int argc, char *argv[]) */
 
 void
 do_exit(int code)
@@ -507,6 +536,26 @@ clear_array(struct array *arrp)
   arrp->data = (double **) NULL;
 }
 
+/* Make an empty array. */
+void
+make_empty_array(struct array *arrp, int nr, int nc)
+{
+  int i;
+
+  if ((arrp->nrows != 0)||(arrp->ncols != 0)) {
+    fprintf(stderr, "Asked to allocate over a filled array, not yet.\n");
+    do_exit(-1);
+  }
+
+  arrp->data = (double **) 
+    XtMalloc((unsigned int) nr * sizeof(double *));
+  for (i = 0; i < nr; i++)
+    arrp->data[i] = (double *)
+      XtMalloc((unsigned int) nc * sizeof(double));
+  arrp->nrows = nr;
+  arrp->ncols = nc;
+}
+
 /* Zero an array. */
 void
 zero_array(struct array *arrp)
@@ -520,60 +569,12 @@ zero_array(struct array *arrp)
 }
 
 void
-configure_pos_data(void)
-{
-  static double config_factor = 1.0;
-  static double config_factor_prev = 1.0;
-  double d, dsum = 0;
-  int i, j, n;
-  static int mds_dims_prev = 3;  /* initial value for mds_dims */
-  
-/*
- * Using pos_orig.nrows and mds_dims, find the average
- * distance between points.  Divide data in mds_dims columns
- * by that value -- having first multiplied by the previous
- * configuration factor?  Run whenever data or dimension is
- * reset: scrambled, reset, mds_ndims, mds_lnorm
-*/
-
-/* 
- * First remove the effect of the previous configuration factor,
- * using the previous value of mds_dims.
-*/
-  for (i = 0; i < pos.nrows; i++)
-    for (j = 0; j < MIN(mds_dims_prev, pos.ncols); j++)
-        pos.data[i][j] *= config_factor_prev;
-
-/* Now find the new configuration factor, using current dims and lnorm */
-  n = 0;
-  for (i = 0; i < pos.nrows-1; i++) {  /* For each node. */
-    for (j = i+1; j < pos.nrows; j++) {
-      d = distance(pos.data[i], pos.data[j], mds_dims, mds_lnorm);
-      dsum += d;
-      n++;
-    }
-  }
-  config_factor = dsum / (double) n;
-
-/* Divide by the new configuration factor */
-  for (i = 0; i < pos.nrows; i++) {
-    for (j = 0; j < MIN(mds_dims, pos.ncols); j++) {
-      pos.data[i][j] /= config_factor;
-    }
-  }
-
-  config_factor_prev = config_factor;
-  mds_dims_prev = mds_dims;
-}
-
-void
 set_vgroups()
 {
   int i, j;
-  for (i=0; i<mds_dims; i++)
-    xgobi.vgroup_ids[i] = 0;
-  for (i=mds_dims, j=1; i<xgobi.ncols_used; i++, j++)
-    xgobi.vgroup_ids[i] = j;
+
+  for (i=0; i<mds_dims; i++)                           xgobi.vgroup_ids[i] = 0;
+  for (i=mds_dims, j=1; i<xgobi.ncols_used; i++, j++)  xgobi.vgroup_ids[i] = j;
 }
 
 int
@@ -589,63 +590,6 @@ dcompare(const void *x1, const void *x2)
     val = 1;
 
   return(val);
-}
-
-
-void
-set_distance_factor(void) {
-  double d, dsum = 0.0;
-  int i, j, count;
-  static int initd = 0;
-  extern Boolean dissim_initd;
-
-  ndistances = dist.nrows * dist.ncols;
-  if (!initd) {
-    distance_vector = (double *) XtMalloc(ndistances * sizeof(double));
-    distance_vector_sort = (double *) XtMalloc(ndistances * sizeof(double));
-    initd = 1;
-  }
-
-  count = 0;
-  for (i=0; i<dist.nrows; i++) {
-    for (j=0; j<dist.ncols; j++) {
-      if (i != j) {
-        if (dist.data[i][j] == DBL_MAX) 
-          ;
-        else {
-          d = pow(dist.data[i][j], mds_power);
-          if (count == ndistances) {
-            fprintf(stderr, "Trouble: distance_vector overfilled\n");
-            break;
-          }
-          distance_vector[count] = 
-            distance_vector_sort[count] = (double) d;
-          count++;
-          dsum += d;
-        }
-      }
-    }
-  }
-
-  /* reset the (global) value of ndistances */
-  ndistances = count;
-
-  /* sort distance_vector */
-  qsort((char *) distance_vector_sort, ndistances, sizeof(double), dcompare);
-
-  distance_factor = (double) dsum / (double) ndistances;
-
-/*
- * This value is now always 1.
- *
- *  max_distance = distance_vector_sort[ndistances - 1];
-*/
-
-/*
- * Update the dissimilarities/distances plot to reflect the
- * changes in the distance vector.
-*/
-  update_dissim_plot();
 }
 
 /* Copy original data into working buffers.  Make sure to leave space */
@@ -678,10 +622,9 @@ reset_data(void)
   /* Copy each row. */
   for (i = 0; i < pos_orig.nrows; i++) {
     /* Make sure right number of columns. */
-    if (pos.ncols != MAXDIMS+1)
+    if (pos.ncols != MAXDIMS)
       pos.data[i] = (double *)
-        XtRealloc((char *) pos.data[i], 
-        (unsigned int) (MAXDIMS+1) * sizeof(double));
+        XtRealloc((char *) pos.data[i], (unsigned int) (MAXDIMS) * sizeof(double));
     /* Copy the data. */
     for (j = 0; j < MIN(pos_orig.ncols, MAXDIMS); j++)
       pos.data[i][j] = pos_orig.data[i][j];
@@ -690,21 +633,10 @@ reset_data(void)
     for (j = MIN(pos_orig.ncols, MAXDIMS); j < MAXDIMS; j++)
       pos.data[i][j] = drandval(UNIFORM);
   }
-
   pos.ncols = MAXDIMS;
+  scale_array_mean(&pos, pos.nrows, pos.ncols-1);
 
   read_labels(xgv_basename, &rowlab, pos.nrows);
-
-/*
- * Find the distance factor.  This sets (and then resets, if
- * necessary) ndistances, as well as building the distance_vector.
-*/
-  set_distance_factor();
-
-/*
- * Adjust position data
-*/
-  configure_pos_data();
 
 /*
  * Initialize the threshold value so that it's greater than
@@ -725,7 +657,7 @@ reset_data(void)
     }
   }
 
-}
+} /* end reset_data(void) */
 
 /* Copy an array into an existing structure. */
 void
@@ -807,41 +739,6 @@ scale_array_median(struct array *arrp, int nr, int nc)
   }
 }
 
-void
-scale_array_mean(struct array *arrp, int nr, int nc)
-{
-  extern double delta;  /* in mds.c */
-  double mean, dsum = 0.0;
-  double max, min, scl;
-  int i, j;
-
-  if (arrp->nrows < nr || arrp->ncols < nc)
-    fprintf(stderr, "This array is smaller than nr or nc\n");
-  else {
-
-    for (j=0; j<nc; j++) {
-      dsum = 0.0;
-      for (i=0; i<nr; i++) dsum += arrp->data[i][j];
-      mean = dsum / nr;
-      for (i=0; i<nr; i++) arrp->data[i][j] -= mean;
-    }
-
-    max = -1000000; min = 1000000;
-    for (j=0; j<nc; j++)
-      for (i=0; i<nr; i++) {
-        if (arrp->data[i][j] < min) min = arrp->data[i][j];
-        if (arrp->data[i][j] > max) max = arrp->data[i][j];
-      }
-    if((max-min)<1E-5) 
-      printf("scale_array_mean: max-min too small = %e",max-min);
-    if(max > -min) scl = max; else scl = -min;
-    for (j=0; j<nc; j++)
-      for (i=0; i<nr; i++) 
-        arrp->data[i][j] = arrp->data[i][j]/scl;
-
-  }
-}
-
 
 /* Fill in a possibly empty distance matrix by computing shortest */
 /* paths (assume a single link is length 1).  Matrix will be nxn. */
@@ -899,9 +796,23 @@ int n)
   scale_array_max(dist_arrp, n, n);
 }
   
+double
+Lp_distance(double *p1, double *p2, int dims, double lnorm)
+{
+  double dsum = 0.0;
+  int i;
+
+  if(lnorm == 2) {
+    for (i = 0; i < dims; i++)  dsum += (p1[i]-p2[i])*(p1[i]-p2[i]);
+    return(sqrt(dsum));
+  } else { /* non-Euclidean */
+    for (i = 0; i < dims; i++)  dsum += pow(fabs(p1[i]-p2[i]), lnorm);
+    return(pow(dsum, 1/lnorm));
+  }
+}
+
 void
-set_dist_matrix_from_pos(struct array *dist_arrp, struct array *pos_arrp,
-double l_norm)
+set_dist_matrix_from_pos(struct array *dist_arrp, struct array *pos_arrp, double lnorm)
 {
   int n = pos_arrp->nrows;
   int i, j;
@@ -920,8 +831,8 @@ double l_norm)
   for (i = 0; i < n-1; i++) {
     dist_arrp->data[i][i] = 0.0;
     for (j = i+1; j < n; j++) {
-      d = distance(pos_arrp->data[i], pos_arrp->data[j],
-         pos_arrp->ncols, l_norm);
+      d = Lp_distance(pos_arrp->data[i], pos_arrp->data[j],
+		      pos_arrp->ncols, lnorm);
       dist_arrp->data[i][j] = d;
       dist_arrp->data[j][i] = d;
     }
@@ -961,6 +872,7 @@ int type)
   }
 
   scale_array_max(dist_arrp, n, n);
+
 }
 
 double
@@ -984,26 +896,6 @@ vect_distance (double *v1, double *v2, int n, int type)
     return (0.0);
   
   return (dot / denom);
-}
-
-/* Make an empty array. */
-void
-make_empty_array(struct array *arrp, int nr, int nc)
-{
-  int i;
-
-  if ((arrp->nrows != 0)||(arrp->ncols != 0)) {
-    fprintf(stderr, "Asked to allocate over a filled array, not yet.\n");
-    do_exit(-1);
-  }
-
-  arrp->data = (double **) 
-    XtMalloc((unsigned int) nr * sizeof(double *));
-  for (i = 0; i < nr; i++)
-    arrp->data[i] = (double *)
-      XtMalloc((unsigned int) nc * sizeof(double));
-  arrp->nrows = nr;
-  arrp->ncols = nc;
 }
 
 /* Stolen from xgobi read_rowlabels. */
@@ -1066,26 +958,6 @@ read_labels(char *rootname, char ***rowlabp, int nrows)
       (void) sprintf((*rowlabp)[i], "%d", i+1);
   }
   return(1);
-}
-
-void
-symmetrize_dists(struct array *dist_arrp)
-{
-  int i, j;
-  int n = dist_arrp->nrows;
-  double mean;
-
-  if (n != dist_arrp->ncols) {
-    fprintf(stderr, "Non square distance matrix!\n");
-    do_exit(-1);
-  }
-
-  for (i = 0; i < n-1; i++) {
-    for (j = i+1; j < n; j++) {
-      mean = (dist_arrp->data[i][j]+dist_arrp->data[j][i])/2;
-      dist_arrp->data[i][j] = dist_arrp->data[j][i] = mean;
-    }
-  }
 }
 
 void
@@ -1167,12 +1039,73 @@ scramble_data(void) {
  * Fill in all data with normal random values ...
 */
 
-  for (i = 0; i < pos_orig.nrows; i++) {
-    /* for (j = 0; j < MAXDIMS; j++, k++) { */
+  for (i = 0; i < pos_orig.nrows; i++)
     for (j = 0; j < mds_dims; j++, k++) {
       pos.data[i][j] = drandval(UNIFORM);  /* on [-1,1] */
     }
+
+  scale_array_mean(&pos, pos.nrows, pos.ncols-1);
+
+}
+
+void
+center_data(void) {
+/*
+ * Center and scale configuration, variables with same aspect ratio
+*/
+
+  extern double delta;  /* in mds.c */
+  double tmp, mean, dsum = 0.0;
+  double max, min, scl;
+  int i, k;
+
+  for (k=0; k<mds_dims; k++) {
+    dsum = 0.0;
+    for (i=0; i<pos.nrows; i++) dsum += pos.data[i][k];
+    mean = dsum / pos.nrows;
+    for (i=0; i<pos.nrows; i++) pos.data[i][k] -= mean;
   }
+
+  max = -DBL_MAX;  min = DBL_MAX;
+  for (k=0; k<mds_dims; k++) {
+    for (i=0; i<pos.nrows; i++) {
+      tmp = pos.data[i][k];
+      if (tmp < min) min = tmp;
+      if (tmp > max) max = tmp;
+    }
+  }
+  if((max-min)<1E-100) 
+    printf("center_data: max-min too small = %e\n",max-min);
+  if(max > -min) { scl = max; } else { scl = -min; }
+  for(k=0; k<mds_dims; k++)
+    for (i=0; i<pos.nrows; i++) 
+      pos.data[i][k] = pos.data[i][k] / scl;
+
+}
+
+void
+symmetrize_dists(void) {
+  int i, j;
+  double d1, d2;
+/*
+ * Symmetrize dissimilarities ...
+*/
+
+  for (i = 0; i < dist.nrows; i++)
+    for (j = 0; j < i; j++) {
+      d1 = dist.data[i][j];  d2 = dist.data[j][i];
+      if(d1 == DBL_MAX && d2 != DBL_MAX) dist.data[i][j] = dist.data[j][i] = d2;	
+      if(d1 != DBL_MAX && d2 == DBL_MAX) dist.data[i][j] = dist.data[j][i] = d1;	
+      if(d1 != DBL_MAX && d2 != DBL_MAX) dist.data[i][j] = dist.data[j][i] = (d1+d2)/2.;	
+    }
+
+}
+
+void
+raw_data(void) {
+
+  copy_array(&dist_orig, &dist);
+
 }
 
 

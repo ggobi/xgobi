@@ -12,17 +12,22 @@
 #include "xgobiexterns.h"
 #include "xgvis.h"
 
+#define IJ i*dist.ncols+j 
+#define UNIFORM 0
+#define NORMAL  1
+
 extern void update_plot(xgobidata *);
-extern void configure_pos_data(void);
-extern void mds_once(Boolean, Boolean, FILE *, FILE *);
+extern void update_dissim_plot(void);
+extern void mds_once(Boolean);
 extern void set_vgroups(void);
 extern void set_dist_matrix_from_edges(struct array *, struct array *, int);
 extern void set_dist_matrix_from_pos(struct array *, struct array *, double);
 extern void set_dist_matrix_from_pos_dot(struct array *, struct array *, int);
-extern void reset_data(void);
 extern void reinit_stress(void);
 extern void scramble_data(void);
-extern void set_distance_factor(void);
+extern void center_data(void);
+extern void symmetrize_dists(void);
+extern double drandval(int);
 
 static void
 reset_dims_label(void) {
@@ -43,13 +48,12 @@ mds_dimsleft_cback(Widget w, XtPointer client_data, XtPointer callback_data)
     mds_dims--;
     reset_dims_label();
 
-    configure_pos_data();
     set_vgroups();
 
     update_plot(&xgobi);
     plot_once(&xgobi);
 
-    mds_once(False, False, NULL, NULL);
+    mds_once(False);
   }
 }
 
@@ -61,13 +65,12 @@ mds_dimsright_cback(Widget w, XtPointer client_data, XtPointer callback_data)
     mds_dims++;
     reset_dims_label();
 
-    configure_pos_data();
     set_vgroups();
 
     update_plot(&xgobi);
     plot_once(&xgobi);
 
-    mds_once(False, False, NULL, NULL);
+    mds_once(False);
   }
 }
 
@@ -164,9 +167,11 @@ choose_dist_cback(Widget w, XtPointer client_data, XtPointer callback_data)
 XtCallbackProc
 reset_cback(Widget w, XtPointer client_data, XtPointer callback_data)
 {
-  reset_data();
+  int i, k;
 
-  configure_pos_data();
+  for(k = 0; k < MIN(pos_orig.ncols, MAXDIMS-1); k++)
+    for(i = 0; i < pos.nrows; i++)
+      pos.data[i][k] = pos_orig.data[i][k];
 
   update_plot(&xgobi);
   plot_once(&xgobi);
@@ -180,7 +185,42 @@ scramble_cback(Widget w, XtPointer client_data, XtPointer callback_data)
 {
   scramble_data();
 
-  configure_pos_data();
+  update_plot(&xgobi);
+  plot_once(&xgobi);
+
+  reinit_stress();
+}
+
+/* ARGSUSED */
+XtCallbackProc
+center_cback(Widget w, XtPointer client_data, XtPointer callback_data)
+{
+
+  center_data();
+
+  update_plot(&xgobi);
+  plot_once(&xgobi);
+
+  reinit_stress();
+}
+
+/* ARGSUSED */
+XtCallbackProc
+symmetrize_cback(Widget w, XtPointer client_data, XtPointer callback_data)
+{
+  symmetrize_dists();
+
+  update_plot(&xgobi);
+  plot_once(&xgobi);
+
+  reinit_stress();
+}
+
+/* ARGSUSED */
+XtCallbackProc
+raw_cback(Widget w, XtPointer client_data, XtPointer callback_data)
+{
+  raw_data();
 
   update_plot(&xgobi);
   plot_once(&xgobi);
@@ -248,28 +288,6 @@ Quit(Widget w, XtPointer client_data, XtPointer callback_data)
 }
 
 /* ARGSUSED */
-/*
-XtCallbackProc
-mds_group_cback(Widget w, XtPointer client_data, XtPointer callback_data)
- * This callback turns grouping in MDS on and off.
-{
-  mds_group = !mds_group;
-}
-*/
-
-/* ARGSUSED */
-/*
-XtCallbackProc
-mds_casewise_cback(Widget w, XtPointer client_data, XtPointer callback_data)
- * This callback turns the use of persistent (sticky) labels
- * for MDS case diagnostics on and off.
-{
-  mds_casewise = !mds_casewise;
-}
-*/
-
-
-/* ARGSUSED */
 XtCallbackProc
 mds_lnorm_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 {
@@ -279,23 +297,24 @@ mds_lnorm_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 
   float slidepos = * (float *) slideposp;
 
-  mds_lnorm = (double) (5.0 * slidepos) + 1.0 ;
-  sprintf(str, "%s: %3.1f ", "Minkowski norm (m)", mds_lnorm);
+  mds_lnorm = floor(((double) (5.0 * slidepos) + 1.0)*10.) / 10. ;
+  sprintf(str, "Minkowski n'rm (m): %3.1f ", mds_lnorm);
   XtSetArg(args[0], XtNstring, str);
   XtSetValues(mds_lnorm_label, args, 1);
 
-  configure_pos_data();
+  mds_lnorm_over_distpow = mds_lnorm/mds_distpow;
+  mds_distpow_over_lnorm = mds_distpow/mds_lnorm;
+
   set_vgroups();
 
   update_plot(&xgobi);
   plot_once(&xgobi);
 }
-
 /* ARGSUSED */
 XtCallbackProc
 mds_power_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 /*
- * Adjust the power to which we raise the distance matrix.
+ * Adjust the power to which we raise the dissim data matrix.
 */
 {
   Arg args[1];
@@ -304,29 +323,50 @@ mds_power_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 
   float slidepos = * (float *) slideposp;
 
-  mds_power = 6. * slidepos ;
-  sprintf(str, "%s: %3.1f ", "Power (p) of D", mds_power);
+  mds_power = floor(6. * slidepos * 10.) / 10. ;
+  sprintf(str, "%s: %3.1f ", "Data Power (D^p)", mds_power);
   XtSetArg(args[0], XtNstring, str);
   XtSetValues(mds_power_label, args, 1);
-
-/*
- * When power changes, reset the distance factor.
-*/
-  set_distance_factor();
 
 /*
  * The third column of the diagnostics matrix has to be
  * reset as well, and this may be the easiest way to do it
  * because the indices are not simple.
 */
-  mds_once(False, False, NULL, NULL);
+  mds_once(False);
+  update_dissim_plot();
+}
+
+/* ARGSUSED */
+XtCallbackProc
+mds_distpow_cback (Widget w, XtPointer client_data, XtPointer slideposp)
+/*
+ * Adjust the power to which we raise the distance matrix.
+*/
+{
+  Arg args[1];
+  char str[30];
+  extern Widget mds_distpow_label;
+
+  float slidepos = * (float *) slideposp;
+
+  mds_distpow = floor(6. * slidepos * 10.) / 10. ;
+  sprintf(str, "%s: %3.1f ", "Dist Power (d^q)", mds_distpow);
+  XtSetArg(args[0], XtNstring, str);
+  XtSetValues(mds_distpow_label, args, 1);
+
+  mds_lnorm_over_distpow = mds_lnorm/mds_distpow;
+  mds_distpow_over_lnorm = mds_distpow/mds_lnorm;
+
+  mds_once(False);
+  update_dissim_plot();
 }
 
 /* ARGSUSED */
 XtCallbackProc
 mds_weightpow_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 /*
- * Adjust the power to which we raise the distance matrix.
+ * Adjust the power to which we raise the dissimilarity matrix to obtain weights.
 */
 {
   Arg args[1];
@@ -335,12 +375,112 @@ mds_weightpow_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 
   float slidepos = * (float *) slideposp;
 
-  mds_weightpow = (slidepos - 0.5)*8.0 ;
-  sprintf(str, "%s: %4.1f ", "Weight power", mds_weightpow);
+  mds_weightpow = floor((slidepos - 0.5)*8.0*10.)/10.;
+  sprintf(str, "%s: %4.1f ", "Wght pow (w=D^r)", mds_weightpow);
   XtSetArg(args[0], XtNstring, str);
   XtSetValues(mds_weightpow_label, args, 1);
+
+  mds_once(False);
 }
 
+/* ARGSUSED */
+XtCallbackProc
+mds_within_between_cback (Widget w, XtPointer client_data, XtPointer slideposp)
+/*
+ * Adjust the degree to which we use within and between grp dissimilarities
+*/
+{
+  Arg args[1];
+  char str[30];
+  extern Widget mds_within_between_label;
+
+  float slidepos = * (float *) slideposp;
+
+  mds_within_between = floor(slidepos * 2.0 * 50.) / 50.;
+  sprintf(str, "Withn=%3.2f Betwn=%3.2f", (2. - mds_within_between), mds_within_between);
+  XtSetArg(args[0], XtNstring, str);
+  XtSetValues(mds_within_between_label, args, 1);
+
+  mds_once(False);
+}
+
+/* ARGSUSED */
+XtCallbackProc
+mds_rand_select_cback (Widget w, XtPointer client_data, XtPointer slideposp)
+/*
+ * Adjust the probability of random selection of a dist/diss
+*/
+{
+  Arg args[1];
+  char str[30];
+  int i;
+  extern Widget mds_rand_select_label;
+
+  float slidepos = * (float *) slideposp;
+
+  mds_rand_select_val = floor(slidepos*1.04 * 100.) / 100.;
+  if(mds_rand_select_val > 1.0) mds_rand_select_val = 1.0;
+  sprintf(str, "Select'n prob: %3.2f\%", mds_rand_select_val);
+  XtSetArg(args[0], XtNstring, str);
+  XtSetValues(mds_rand_select_label, args, 1);
+
+  mds_once(False);
+}
+/* ARGSUSED */
+XtCallbackProc
+mds_rand_select_new_cback (Widget w, XtPointer client_data, XtPointer callback_data)
+/*
+ * Call for new random selection vector
+*/
+{
+  mds_rand_select_new = TRUE;
+
+  mds_once(False);
+}
+
+/* ARGSUSED */
+XtCallbackProc
+mds_perturb_cback (Widget w, XtPointer client_data, XtPointer slideposp)
+/*
+ * Adjust the degreee of perturbation of configuration
+*/
+{
+  Arg args[1];
+  char str[30];
+  int i;
+  extern Widget mds_perturb_label;
+
+  float slidepos = * (float *) slideposp;
+
+  mds_perturb_val = floor(slidepos*1.04 * 100.) / 100.;
+  if(mds_perturb_val > 1.0) mds_perturb_val = 1.0;
+  sprintf(str, "Perturb: %3.2f\%", mds_perturb_val);
+  XtSetArg(args[0], XtNstring, str);
+  XtSetValues(mds_perturb_label, args, 1);
+
+  mds_once(False);
+}
+/* ARGSUSED */
+XtCallbackProc
+mds_perturb_new_cback (Widget w, XtPointer client_data, XtPointer callback_data)
+/*
+ * Call for new perturbation with normal random numbers:
+*/
+{
+  int i, j, k;
+
+  for (i = 0; i < pos_orig.nrows; i++)
+    for (j = 0; j < mds_dims; j++, k++) {
+      pos.data[i][j] = (1.0-mds_perturb_val)*pos.data[i][j] + (mds_perturb_val)*drandval(NORMAL);  /* standard normal */
+    }
+
+  /*  scale_array_mean(&pos, pos.nrows, pos.ncols); */
+
+  update_plot(&xgobi);
+  plot_once(&xgobi);
+
+  reinit_stress();
+}
 
 /* ARGSUSED */
 XtCallbackProc
@@ -355,8 +495,8 @@ mds_stepsize_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 
   float slidepos = * (float *) slideposp;  /* 0:1 */
 
-  mds_stepsize = slidepos*slidepos;
-  sprintf(str, "%s: %3.3f ", "Stepsize", mds_stepsize);
+  mds_stepsize = floor(0.2 * slidepos * slidepos * 10000.) / 10000.;
+  sprintf(str, "%s: %3.4f ", "Stepsize", mds_stepsize);
   XtSetArg(args[0], XtNstring, str);
   XtSetValues(mds_stepsize_label, args, 1);
 }
@@ -368,7 +508,7 @@ mds_iterate_cback (Widget w, XtPointer client_data, XtPointer callback_data)
  * Step: one step through the mds loop.
 */
 {
-  mds_once(True, False, NULL, NULL);
+  mds_once(True);
   update_plot(&xgobi);
   RunWorkProc((xgobidata *) &xgobi);
   plot_once(&xgobi);
@@ -382,6 +522,7 @@ fcancel_cback(Widget w, XtPointer client_data, XtPointer callback_data)
 */
 {
   XtDestroyWidget(XtParent(XtParent(w)));
+  printf("fcancel_cback: If the plot window is fully or partially exposed, clear and redraw. \n");
 }
 
 /* ARGSUSED */
@@ -536,27 +677,30 @@ mds_launch_cback (Widget w, XtPointer client_data, XtPointer callback_data)
   extern Widget mds_launch_ntxt;
   int i, j;
   char **col_name;
-  int nc = 5;
-  static char *clab[] = {"d_config", "D^p", "Weight", "i", "j"};
+  int nc = 7;
+  static char *clab[] = {"d_ij", "f(D_ij)", "D_ij", "Res_ij", "Wgt_ij", "i", "j"};
   char fname[512], config_basename[512];
-  FILE *fp, *fpdat, *fprow;
+  FILE *fp, *fpdat, *fprow, *fpvgrp;
   static int iter = 0;
   char message[MSGLENGTH];
   char command[512];
   char xgobi_exec[512];
   char *xgobidir;
   struct stat buf;
-  char *subset_str;
-  int subset_size;
+  char *subset_str, *nstr;
+  int subset_size=0;
 
+  /* AB part of disabling the subselection of distances for the Shepard plot
   XtVaGetValues(mds_launch_ntxt, XtNstring, &subset_str, NULL);
   if (strlen(subset_str) == 0)
-    subset_size = ndistances;
+    subset_size = num_active_dist;
   else
     subset_size = atoi(subset_str);
   if (subset_size == 0)
-    subset_size = ndistances;
-  else subset_size = MIN(subset_size, ndistances);
+    subset_size = num_active_dist;
+  else subset_size = MIN(subset_size, num_active_dist);
+  */
+  subset_size = num_active_dist;
 
   col_name = (char **) XtMalloc(
     (Cardinal) nc * sizeof (char *));
@@ -569,27 +713,55 @@ mds_launch_cback (Widget w, XtPointer client_data, XtPointer callback_data)
   sprintf(fname, "%s.dat", config_basename);
   if ( (fpdat = fopen(fname, "w")) == NULL) {
     sprintf(message,
-      "The file '%s' can not be created\n", fname);
+	    "The file '%s' can not be created\n", fname);
     show_message(message, &xgobi);
     return(0);
   } else {
     sprintf(fname, "%s.row", config_basename);
     if ( (fprow = fopen(fname, "w")) == NULL) {
       sprintf(message,
-        "The file '%s' can not be created\n", fname);
+	      "The file '%s' can not be created\n", fname);
       show_message(message, &xgobi);
-      fclose(fpdat);
+      fclose(fprow);
       return(0);
+    } else {
+      sprintf(fname, "%s.vgroups", config_basename);
+      if ( (fpvgrp = fopen(fname, "w")) == NULL) {
+	sprintf(message,
+		"The file '%s' can not be created\n", fname);
+	show_message(message, &xgobi);
+	fclose(fpvgrp);
+	return(0);
+      }
     }
   }
-
 
   /*
    * This takes care of writing out the data and the row labels
   */
-  mds_once(False, True, fpdat, fprow);
+  {double dist_trans, dist_config, dist_data, weight, resid;
+  xgobidata *xg = (xgobidata *) &xgobi;
+  mds_once(FALSE);
+  for (i = 0; i < dist.nrows; i++) {
+    for (j = 0; j < dist.ncols; j++) {
+      dist_trans  = trans_dist[IJ];             	if (dist_trans  ==  DBL_MAX) continue;
+      dist_config = config_dist[IJ];
+      dist_data   = dist.data[i][j];
+      resid = (dist_trans - dist_config);
+      if(mds_weightpow == 0. && mds_within_between == 1.) { weight = 1.0; } else { weight = weights[IJ]; }
+      fprintf(fpdat, "%5.5g %5.5g %5.5g %5.5g %5.5g %d %d\n",
+	      dist_config, dist_trans, dist_data, resid, weight, i, j);
+      fprintf(fprow, "%s|%s\n", xg->rowlab[ i ], xg->rowlab[ j ]);
+    }
+  }
+  }
+
+  /* variable groups file: keep variables "i" and "j" on same scale */
+  fprintf(fpvgrp, "1\n2\n3\n4\n5\n6\n6\n");
+
   fclose(fpdat);
   fclose(fprow);
+  fclose(fpvgrp);
 
   /* Write out the column labels */
   sprintf(fname, "%s.col", config_basename);
@@ -599,7 +771,6 @@ mds_launch_cback (Widget w, XtPointer client_data, XtPointer callback_data)
     show_message(message, &xgobi);
     return(0);
   } else {
-
     for (i=0; i<nc; i++) {
       fprintf(fp, "%s\n", col_name[i]);
     }
@@ -627,4 +798,12 @@ mds_launch_cback (Widget w, XtPointer client_data, XtPointer callback_data)
   system (command);
 
   iter++;
-}
+
+} /* end mds_launch_cback(... */
+
+
+
+
+
+
+
