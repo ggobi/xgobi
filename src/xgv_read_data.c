@@ -303,7 +303,7 @@ read_array_struct(char *data_in, struct array *arrp, Boolean allow_na)
 void
 initialize_data(int argc, char *argv[])
 {
-  int i, j, biggest_link;
+  int j, biggest_link;
   char fname[128];
   struct stat buf;
   Boolean found;
@@ -945,6 +945,8 @@ read_labels(char *rootname, char ***rowlabp, int nrows)
       if (ncase >= nrows)
         break;
     }
+    fclose (fp);
+
     if (ncase != nrows) {
       (void) printf("number of labels = %d, number of rows = %d\n",
          ncase, nrows);

@@ -2,7 +2,7 @@
 # $XConsortium: imake.c /main/90 1996/11/13 14:43:23 lehors $
 
 # ----------------------------------------------------------------------
-# Makefile generated from "Imake.tmpl" and </tmp/IIf.a0xDMz>
+# Makefile generated from "Imake.tmpl" and </tmp/IIf.a08AzI>
 # $TOG: Imake.tmpl /main/245 1997/05/20 10:05:47 kaleb $
 #
 
@@ -511,11 +511,11 @@ CXXPROJECT_DEFINES =
 #  the xgobi directories src, help, ps, etc.
          XGOBID = $(PWD)/..
 
-             CC = cc
-      CCOPTIONS = -xansi -n32
+              CC = cc
+       CCOPTIONS = -xansi -n32
 
-           #CC = gcc
-    #CCOPTIONS = -ansi -w
+#           CC = gcc
+#    CCOPTIONS = -ansi -w
 
              LD =
      CDEBUGFLAGS = -g
@@ -577,12 +577,12 @@ RPCOBJ =
 XGOBISRC = xgobi.c $(JOINTSRC) $(RPCSRC) $(CORBASRC)
 XGOBIOBJ = xgobi.o $(JOINTOBJ) $(RPCOBJ) $(CORBAOBJ)
 
-XGVISSRC = xgvis.c xgv_dissim.c xgv_qsort.c xgv_mds.c \
-	xgv_molecule.c xgv_read_data.c xgv_help.c \
-	xgv_stress.c xgv_cbacks.c xgv_widgets.c $(JOINTSRC)
-XGVISOBJ = xgvis.o xgv_dissim.o xgv_qsort.o xgv_mds.o \
-	xgv_molecule.o xgv_read_data.o xgv_help.o \
-	xgv_stress.o xgv_cbacks.o xgv_widgets.o $(JOINTOBJ)
+XGVISSRC = xgvis.c xgv_histogram.c xgv_qsort.c xgv_mds.c \
+	xgv_read_data.c xgv_help.c \
+	xgv_stressplot.c xgv_cbacks.c xgv_widgets.c $(JOINTSRC)
+XGVISOBJ = xgvis.o xgv_histogram.o xgv_qsort.o xgv_mds.o \
+	xgv_read_data.o xgv_help.o \
+	xgv_stressplot.o xgv_cbacks.o xgv_widgets.o $(JOINTOBJ)
 
 all:: xgvis xgobi
 

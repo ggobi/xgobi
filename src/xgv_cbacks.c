@@ -420,7 +420,7 @@ mds_rand_select_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 
   mds_rand_select_val = floor(slidepos*1.04 * 100.) / 100.;
   if(mds_rand_select_val > 1.0) mds_rand_select_val = 1.0;
-  sprintf(str, "Select'n prob: %3.2f\%", mds_rand_select_val);
+  sprintf(str, "Select'n prob: %3.2f%%", mds_rand_select_val);
   XtSetArg(args[0], XtNstring, str);
   XtSetValues(mds_rand_select_label, args, 1);
 
@@ -454,7 +454,7 @@ mds_perturb_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 
   mds_perturb_val = floor(slidepos*1.04 * 100.) / 100.;
   if(mds_perturb_val > 1.0) mds_perturb_val = 1.0;
-  sprintf(str, "Perturb: %3.2f\%", mds_perturb_val);
+  sprintf(str, "Perturb: %3.2f%%", mds_perturb_val);
   XtSetArg(args[0], XtNstring, str);
   XtSetValues(mds_perturb_label, args, 1);
 
@@ -467,11 +467,11 @@ mds_perturb_new_cback (Widget w, XtPointer client_data, XtPointer callback_data)
  * Call for new perturbation with normal random numbers:
 */
 {
-  int i, j, k;
+  int i, k;
 
   for (i = 0; i < pos_orig.nrows; i++)
-    for (j = 0; j < mds_dims; j++, k++) {
-      pos.data[i][j] = (1.0-mds_perturb_val)*pos.data[i][j] + (mds_perturb_val)*drandval(NORMAL);  /* standard normal */
+    for (k = mds_freeze_var; k < mds_dims; k++) {
+      pos.data[i][k] = (1.0-mds_perturb_val)*pos.data[i][k] + (mds_perturb_val)*drandval(NORMAL);  /* standard normal */
     }
 
   /*  scale_array_mean(&pos, pos.nrows, pos.ncols); */
@@ -687,10 +687,10 @@ mds_launch_cback (Widget w, XtPointer client_data, XtPointer callback_data)
   char xgobi_exec[512];
   char *xgobidir;
   struct stat buf;
-  char *subset_str, *nstr;
   int subset_size=0;
 
   /* AB part of disabling the subselection of distances for the Shepard plot
+  char *subset_str, *nstr;
   XtVaGetValues(mds_launch_ntxt, XtNstring, &subset_str, NULL);
   if (strlen(subset_str) == 0)
     subset_size = num_active_dist;

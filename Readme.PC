@@ -4,7 +4,7 @@ to suggest than to use a product like Hummingbird Exceed to
 start xgobi on a remote machine running UNIX and display
 the window locally on a PC running Windows.
 
-Recently, though, Brian Ripley put together a version of xgobi
+A year ago, though, Brian Ripley put together a version of xgobi
 that works under X servers that run directly on the PC.
 
    http://www.stats.ox.ac.uk/pub/SWin/xgobi.zip

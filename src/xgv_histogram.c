@@ -307,7 +307,7 @@ thr_button(Widget w, XtPointer client_data, XEvent *evnt)
 void
 reset_thr_bins(void)
 {
-  int i, j;
+  int i;
   double fac, t_d;
 
   thr_bwidth = 5;  /* Try a fixed binwidth of 5 for a minute */
@@ -370,7 +370,8 @@ set_pwidth(void)
 
 /* ARGSUSED */
 XtCallbackProc
-thr_resize_cback(Widget w, XtPointer client_data, XtPointer callback_data)
+thr_resize_cback(Widget w, XtPointer client_data,
+  XtPointer callback_data)
 {
   XtVaGetValues(thr_wksp,
     XtNwidth, &thr_width,

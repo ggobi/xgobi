@@ -1,19 +1,20 @@
 Installing the xgobi S function
 
-a)  Edit the file Sfunction
+a)  Edit the file xgobi.S
 
-  The file Sfunction contains the definition of the XGobi S
-  function, named xgobi().  Find the line in which the pathname of
-  the XGobi executable is specified, and edit it to point to your copy.
+  The file xgobi.S contains the definition of the XGobi S
+  function, named xgobi().  Find the line in which the pathname
+  of the XGobi executable is specified, and edit it to point to
+  your copy.
 
-b)  Source Sfunction
+b)  Source xgobi.S
 
-  Initiate a New S session, and then type source("Sfunction") to
+  Initiate a New S session, and then type source("xgobi.S") to
   define the XGobi S function.
 
 c)  Install the help page
 
-  The file doc/Sfunction.d contains the S help page.  Move it to
+  The file doc/xgobi.d contains the S help page.  Move it to
   .Data/.Help/xgobi.
 
 

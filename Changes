@@ -1,3 +1,13 @@
+September 2001:
+
+  A great many extensions were added to xgvis, and
+  a few bugs repaired in xgobi.
+
+August 5 2000:
+
+  Sphering is handled as a transformation instead of being
+  buried inside the touring code.
+
 January 3 2000:
 
   The initial CVS repository on franz, really just a developer's

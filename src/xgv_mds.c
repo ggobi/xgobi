@@ -116,8 +116,8 @@ L2_norm(double *p1)
   double dsum = 0.0;
   int k;
 
-  for (k = 0; k < mds_dims; k++)  dsum += p1[k]*p1[k];
-  return(sqrt(dsum));
+  for (k = mds_freeze_var; k < mds_dims; k++)  dsum += p1[k]*p1[k];
+  return(dsum);
 }
 
 
@@ -310,8 +310,9 @@ int realCompare(const void* aPtr, const void* bPtr)
 void
 isotonic_transform()
 {
-  int i, j, ii, n;
-  double tmp, tmp_dist, tmp_distsum, tmp_weightsum, this_weight, t_d_i, t_d_ii, tmp_distmax, tmp_distmin, tmp_distmean;
+  int i, j, ii;
+  double tmp, tmp_dist, tmp_distsum, tmp_weightsum, this_weight, t_d_i, t_d_ii, tmp_distmax, tmp_distmin;
+  /* double tmp_distmean; */
   Boolean finished;
   static int prev_nonmetric_active_dist = 0;
 
@@ -431,7 +432,7 @@ isotonic_transform()
 } /* end isotonic_transform() */
 
 
-/* ---------------------------------------------------------------- /*
+/* ---------------------------------------------------------------- */
 /*
  * Perform one loop of the iterative mds function.
  *
@@ -441,19 +442,20 @@ isotonic_transform()
 void
 mds_once(Boolean doit)
 {
-  static int i, j, k, ii, n;
+  static int i, j, k, /*ii,*/ n;
 
   static Boolean gradient_p = True;
   static struct array gradient;
   
-  static int prev_active_dist = -1,  prev_nonmetric_active_dist = -1;
+  static int prev_active_dist = -1 /*, prev_nonmetric_active_dist = -1*/;
 
-  static Boolean finished;
+  /*static Boolean finished;*/
 
-  static double dist_config, dist_data, dist_trans, resid, weight;
-  static double step_mag, step_dir, gsum, psum, gfactor;
-  static double tmp, tmp_dist, tmp_sum, tmp_weight, tmp_mean, tmp_max, t_d_i, t_d_ii;
-  static double tmp_rand;
+  static double dist_config, /*dist_data,*/ dist_trans, resid, weight;
+  static double step_mag, /*step_dir,*/ gsum, psum, gfactor;
+  static double tmp;
+  /* static double tmp_max, t_d_i, t_d_ii, tmp_weight, tmp_mean, tmp_dist, tmp_sum; */
+  /*static double tmp_rand;*/
 
   /* used in macros SAMEGLYPH and CURRENTGLYPH */
   xgobidata *xg = (xgobidata *) &xgobi;
@@ -702,11 +704,11 @@ mds_once(Boolean doit)
       psum += L2_norm(pos.data[i]);
     }
     if (gsum < delta) gfactor = 0.0;
-    else gfactor = mds_stepsize * psum/gsum;
+    else gfactor = mds_stepsize * sqrt(psum/gsum);
 
     /* add the gradient matrix to the position matrix */
     for (i=0; i<pos.nrows; i++)
-      for (k=0; k<mds_dims; k++)
+      for (k=mds_freeze_var; k<mds_dims; k++)
         pos.data[i][k] += (gfactor * gradient.data[i][k]);
 
     /* experiment: normalize point cloud after using simplified gradient */

@@ -63,6 +63,7 @@ XGVIS_ double mds_perturb_val INIT(=1.0);
 XGVIS_ double mds_threshold_high  INIT(= 0.0);
 XGVIS_ double mds_threshold_low  INIT(= 0.0);  /* what initial value? */
 XGVIS_ int    mds_dims INIT(= 3);
+XGVIS_ int    mds_freeze_var INIT(= 0);
 
 /* Used in scaling during each mds loop; set in reset_data */
 XGVIS_ double *config_dist   INIT(= NULL); /* spave vs time: store configuration distances to save recalculation */

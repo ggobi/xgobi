@@ -24,7 +24,8 @@ xgvis_help_done_cback(Widget w, XtPointer client_data, XtPointer callback_data)
 
 /* ARGSUSED */
 XtCallbackProc
-xgvis_help_MDS_background_cback(Widget w, XtPointer client_data, XtPointer callback_data)
+xgvis_help_MDS_background_cback(Widget w, XtPointer client_data,
+  XtPointer callback_data)
 {
   char fname[100];
   char message[MSGLENGTH];
@@ -76,10 +77,10 @@ xgvis_help_MDS_background_cback(Widget w, XtPointer client_data, XtPointer callb
     return((XtCallbackProc) 0);
   }
   else {
-    Widget hpopup, hframe, hform, hfunc, htext, hdone;
-    Screen *scrn;
-    Pixmap func_pix;
-    Pixel funcfg, funcbg;
+    Widget hpopup, hframe, /*hform, hfunc,*/ htext, hdone;
+    /*Screen *scrn;*/
+    /*Pixmap func_pix;*/
+    /*Pixel funcfg, funcbg;*/
 
     /* 80 columns x 20 rows, I hope */
     width = 45 * XTextWidth(appdata.helpFont, "M", 1) ;
@@ -198,10 +199,10 @@ xgvis_help_controls_cback(Widget w, XtPointer client_data, XtPointer callback_da
     return((XtCallbackProc) 0);
   }
   else {
-    Widget hpopup, hframe, hform, hfunc, htext, hdone;
-    Screen *scrn;
-    Pixmap func_pix;
-    Pixel funcfg, funcbg;
+    Widget hpopup, hframe, /*hform, hfunc,*/ htext, hdone;
+    /*Screen *scrn;*/
+    /*Pixmap func_pix;*/
+    /*Pixel funcfg, funcbg;*/
 
     /* 80 columns x 20 rows, I hope */
     width = 45 * XTextWidth(appdata.helpFont, "M", 1) ;
@@ -594,10 +595,10 @@ xgvis_help_input_file_formats_cback(Widget w, XtPointer client_data, XtPointer c
     return((XtCallbackProc) 0);
   }
   else {
-    Widget hpopup, hframe, hform, hfunc, htext, hdone;
-    Screen *scrn;
+    Widget hpopup, hframe, /*hform, hfunc,*/ htext, hdone;
+/*  Screen *scrn;
     Pixmap func_pix;
-    Pixel funcfg, funcbg;
+    Pixel funcfg, funcbg; */
 
     /* 80 columns x 20 rows, I hope */
     width = 45 * XTextWidth(appdata.helpFont, "M", 1) ;

@@ -1,7 +1,15 @@
 This file contains instructions for compiling the `xgobi' and `xgvis'
 executables.
 
-This release is dated November, 1999.  If you want to get a newer
+// Heads up:  A descendant of xgobi, to be named ggobi, is
+// now in the works.  It's built using gtk+ (www.gtk.org)
+// so it looks quite different and it'll be more portable
+// than xgobi.  It has an API, and can be embedded in R,
+// resulting in a powerful combination of direction manipulation
+// graphics and a statistical programming language.
+// You can find it on www.ggobi.org.
+
+This release is dated September, 2001.  If you want to get a newer
 distribution before starting, try this URL, and see if the
 distribution there is newer:
 
@@ -65,9 +73,7 @@ In the best case, all you need to do is the following:
   If something doesn't work, read on.  
 
   * Most likely something went wrong in `make', in which case you may
-    have to edit `Imakefile' and recreate `Makefile'.  A typical
-    problem is that the random number generator is misspecified in
-    `Imakefile'.
+    have to edit `Imakefile' and recreate `Makefile'.
 
   * If `xmkmf' just doesn't work, copy a `Makefile*' from the
     directory `makefiles' and tailor it; see below.
@@ -82,18 +88,12 @@ In the best case, all you need to do is the following:
     you're compiling it,
   * to specify a C compiler
   * to turning debugging off (to generate smaller binaries)
-  * to reset the random number generator in case drand48()
-    isn't present on your machine
 
 ////////////////////////////////////////////////////////////////
 //          XGOBID = $(PWD)/..
 //              CC = cc
 //              LD =
 //     CDEBUGFLAGS = -g
-//
-///**/#  Choose a random number generator, random or drand48
-//              #R = USE_RANDOM
-//               R = USE_DRAND48
 ////////////////////////////////////////////////////////////////
 
   If you know how `xmkmf' works, you can further edit the Imakefile to
@@ -141,16 +141,10 @@ Other editing that might be required:
   can be found and then edit the Makefile so that the variable
   XGOBID points to that directory.
 
-  You may also want to change the setting for the random number
-  generator to be used.  Some machines have both drand48 and
-  random, but some have only one or the other.
-
-
-
 ////////////////////////////////////////////////////////////////
 // Notes
 //
-  
+
 // Resources
 
   !! WARNING !! :
