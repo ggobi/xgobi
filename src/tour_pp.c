@@ -3495,8 +3495,7 @@ spherize_data(xgobidata *xg, int num_pcs, int nsvars, int *svars)
   int i, j, k, m;
   float tmpf;
 
-printf("in spherize\n");
-  
+/*printf("in spherize\n");*/
 /* spherize data */
 /*  for (i=0; i<num_pcs; i++)
   {
@@ -3682,7 +3681,7 @@ update_vc_active_and_do_svd(xgobidata *xg, int nsvars, int *svars)
 {
   int i, j, k;
   int vc_equals_I;
-  char message[5*MSGLENGTH], str[100];
+/*   char message[5*MSGLENGTH], str[100]; */
   paird *pairs;
   int rank;
   float *e;
@@ -3701,7 +3700,7 @@ update_vc_active_and_do_svd(xgobidata *xg, int nsvars, int *svars)
     {
       /*      eigenval[i] = a[i];*/
       eigenval[i] = sqrt((double) a[i]);
-      printf("%f ",a[i]);
+/*      printf("%f ",a[i]);*/
 /*      if (eigenval[i] == 0 || eigenval[0]/eigenval[i] > 10000)
       {
         singular_vc = True;

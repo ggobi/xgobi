@@ -2,7 +2,7 @@
 # $XConsortium: imake.c /main/90 1996/11/13 14:43:23 lehors $
 
 # ----------------------------------------------------------------------
-# Makefile generated from "Imake.tmpl" and </tmp/IIf.a0H_oW>
+# Makefile generated from "Imake.tmpl" and </tmp/IIf.a0JsIK>
 # $TOG: Imake.tmpl /main/245 1997/05/20 10:05:47 kaleb $
 #
 
@@ -161,7 +161,7 @@ CXXEXTRA_INCLUDES =
     INSTKMEMFLAGS = -m 2755 -g sys
 
       CDEBUGFLAGS = $(OPTIMIZER)
-        CCOPTIONS = -xansi $(SGIABIOPTS) $(SGIABIDEFS) -w
+        CCOPTIONS = -xansi $(SGIABIOPTS) $(SGIABIDEFS)
 
       ALLINCLUDES = $(INCLUDES) $(EXTRA_INCLUDES) $(TOP_INCLUDES) $(STD_INCLUDES)
        ALLDEFINES = $(ALLINCLUDES) $(STD_DEFINES) $(EXTRA_DEFINES) $(PROTO_DEFINES) $(THREADS_DEFINES) $(DEFINES)
@@ -523,7 +523,7 @@ CXXPROJECT_DEFINES =
 # EXTRA_LDOPTIONS = -static
 
 #  Choose a random number generator, random or drand48
-               R = USE_RANDOM
+              #R = USE_RANDOM
               #R = USE_DRAND48
 
 #
@@ -542,7 +542,8 @@ CXXPROJECT_DEFINES =
    SYS_LIBRARIES = -lm
 
         #DEFINES = -D$(R) -DDEFAULTDIR=\"$(PWD)/..\"
-         DEFINES = -D$(R) -DDEFAULTDIR=\"$(XGOBID)\"
+        #DEFINES = -D$(R) -DDEFAULTDIR=\"$(XGOBID)\"
+         DEFINES = -DDEFAULTDIR=\"$(XGOBID)\"
 
 JOINTSRC = xgobi_init.c pipeline.c read_array.c \
 	initialize.c widgets.c callbacks.c getfname.c \
@@ -559,7 +560,7 @@ JOINTSRC = xgobi_init.c pipeline.c read_array.c \
 	legendre.c hermite.c natrl_hermite.c de_indices.c \
 	central_mass.c holes.c skewness.c \
 	tour_section.c corr.c corr_index.c corr_pursuit.c corr_util.c \
-	DrawingA.c
+	DrawingA.c mt19937-1.c
 JOINTOBJ = xgobi_init.o pipeline.o read_array.o \
 	initialize.o widgets.o callbacks.o getfname.o \
 	xyplot.o make_axes.o line_editor.o missing.o  \
@@ -575,7 +576,7 @@ JOINTOBJ = xgobi_init.o pipeline.o read_array.o \
 	legendre.o hermite.o natrl_hermite.o de_indices.o \
 	central_mass.o holes.o skewness.o \
 	tour_section.o corr.o corr_index.o corr_pursuit.o corr_util.o \
-	DrawingA.o
+	DrawingA.o mt19937-1.o
 
 RPCSRC =
 RPCOBJ =

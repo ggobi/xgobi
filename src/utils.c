@@ -31,51 +31,30 @@
 #include "xgobitypes.h"
 #include "xgobivars.h"
 
+/*-- start using the same random number generator as ggobi --*/
+extern void sgenrand (unsigned long);
+extern double genrand (void);
+extern void lsgenrand(unsigned long seed_array);
+
 void
 init_random_seed() {
-#ifdef USE_DRAND48
-  /* initialize a seed for drand48() and lrand48() */
-  (void) srand48((long) time((long *) 0));
-#else
-  /* initialize a seed for random(); */
-  srandom((int) time((long *) 0));
-#endif
+  sgenrand ((long) time ((long *) 0));
 }
 
 
 double
-randvalue(void) {
-  double drand;
-
-#ifdef USE_DRAND48
-  drand = drand48();    /* rrand on [0.0,1.0] */
-#else
-  /* random() returns a value on [0, (2**31)-1], or [0, INT_MAX] */
-  long lrand = (long) random();
-  drand = (double) lrand / (double) INT_MAX;
-#endif
-
-  return drand;
+randvalue (void) {
+  return (genrand ());   
 }
 
 void
-rnorm2(double *drand, double *dsave) {
-
-#ifdef USE_DRAND48
-  *drand = 2.0 * drand48() - 1.0;
-  *dsave = 2.0 * drand48() - 1.0;
-#else
-  long lrand, lsave;
-  lrand = random();
-  lsave = random();
-  *drand = 2.0 * (double) lrand / (double) INT_MAX - 1.0;
-  *dsave = 2.0 * (double) lsave / (double) INT_MAX - 1.0;
-#endif
-
+rnorm2 (double *drand, double *dsave) {
+  *drand = 2.0 * genrand () - 1.0;
+  *dsave = 2.0 * genrand () - 1.0;
 }
 
 int
-find_selected_cols(xgobidata *xg, int *cols)
+find_selected_cols (xgobidata *xg, int *cols)
 {
   int i, ncols = 0;
 
