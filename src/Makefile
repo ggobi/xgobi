@@ -2,7 +2,7 @@
 # $XConsortium: imake.c /main/90 1996/11/13 14:43:23 lehors $
 
 # ----------------------------------------------------------------------
-# Makefile generated from "Imake.tmpl" and </tmp/IIf.a0JsIK>
+# Makefile generated from "Imake.tmpl" and </tmp/IIf.a0xDMz>
 # $TOG: Imake.tmpl /main/245 1997/05/20 10:05:47 kaleb $
 #
 
@@ -498,9 +498,8 @@ CXXPROJECT_DEFINES =
 # start of Imakefile
 
 #
-#	This is an Imakefile for the XGobi program.  The only changes that
-#	should need to be made is for the XGOBID variable and sometimes
-#	the random number generator.
+#	This is an Imakefile for the XGobi program.  The only change that
+#	might need to be made is for the XGOBID variable.
 #
 
 # Remove the comment delimeters on the second to next line to
@@ -522,10 +521,6 @@ CXXPROJECT_DEFINES =
      CDEBUGFLAGS = -g
 # EXTRA_LDOPTIONS = -static
 
-#  Choose a random number generator, random or drand48
-              #R = USE_RANDOM
-              #R = USE_DRAND48
-
 #
 # RPC: Remote Procedure Calls
 #
@@ -541,8 +536,6 @@ CXXPROJECT_DEFINES =
 
    SYS_LIBRARIES = -lm
 
-        #DEFINES = -D$(R) -DDEFAULTDIR=\"$(PWD)/..\"
-        #DEFINES = -D$(R) -DDEFAULTDIR=\"$(XGOBID)\"
          DEFINES = -DDEFAULTDIR=\"$(XGOBID)\"
 
 JOINTSRC = xgobi_init.c pipeline.c read_array.c \
@@ -584,12 +577,14 @@ RPCOBJ =
 XGOBISRC = xgobi.c $(JOINTSRC) $(RPCSRC) $(CORBASRC)
 XGOBIOBJ = xgobi.o $(JOINTOBJ) $(RPCOBJ) $(CORBAOBJ)
 
-XGVISSRC = xgvis.c xgv_dissim.c xgv_mds.c \
+XGVISSRC = xgvis.c xgv_dissim.c xgv_qsort.c xgv_mds.c \
 	xgv_molecule.c xgv_read_data.c xgv_help.c \
 	xgv_stress.c xgv_cbacks.c xgv_widgets.c $(JOINTSRC)
-XGVISOBJ = xgvis.o xgv_dissim.o xgv_mds.o \
+XGVISOBJ = xgvis.o xgv_dissim.o xgv_qsort.o xgv_mds.o \
 	xgv_molecule.o xgv_read_data.o xgv_help.o \
 	xgv_stress.o xgv_cbacks.o xgv_widgets.o $(JOINTOBJ)
+
+#	xgv_qsort.c isotonic.c xgv_mds_a.c xgv_mds \
 
 all:: xgvis xgobi
 

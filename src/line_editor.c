@@ -467,14 +467,11 @@ add_line_button(Widget w, xgobidata *xg, XEvent *evnt, Boolean *dispatch)
   static int last_addeda = -1, last_addedb = -1;
   int i;
 
-  switch (xbutton->type)
-  {
+  switch (xbutton->type) {
     case ButtonPress:
 
-      if (xbutton->button == 1)
-      {
-        if (le_nearest_pt != -1)
-        {
+      if (xbutton->button == 1) {
+        if (le_nearest_pt != -1) {
           /*
            * Get the current pointer position.
           */
@@ -495,8 +492,7 @@ add_line_button(Widget w, xgobidata *xg, XEvent *evnt, Boolean *dispatch)
       {
         int link_to_remove;
 
-        for (i=0; i<xg->nlines; i++)
-        {
+        for (i=0; i<xg->nlines; i++) {
           if (xg->connecting_lines[i].a == last_addeda &&
             xg->connecting_lines[i].b == last_addedb)
           {
@@ -524,8 +520,7 @@ add_line_button(Widget w, xgobidata *xg, XEvent *evnt, Boolean *dispatch)
 
     case ButtonRelease:
 
-      if (xbutton->button == 1)
-      {
+      if (xbutton->button == 1) {
         if (le_start != -1 && le_nearest_pt != -1 &&
             (le_nearest_pt != le_start) )
         {

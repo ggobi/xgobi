@@ -1,3 +1,8 @@
+/* call:
+  ./xgvis /usr/andreas/XGVIS/MORSE/morsecodes &
+  ./xgvis /usr/andreas/XGVIS/GRAPHS/perm5 &
+ */
+
 /* AB: changed loss function, fixed old mds_respow =2
    May 18, 1998: reused mds_respow as power of ||x_i-x_j||^mds_respow
    May 25, 1998: reused mds_respow for w_ij = D_ij^(mds_respow-2)
@@ -39,6 +44,8 @@ extern void draw_stress(void);
 extern void zero_array(struct array *);
 extern void scale_array_mean(struct array *, int, int, xgobidata);
 extern void update_shepard_labels(int);
+
+extern Widget metric_cmd[2];
 
 /* Macros. */
 #define DOUBLE(x) ((double)(x))
@@ -136,6 +143,25 @@ q = mds_weightpow
 double delta = 1.0/100000.0;
 #define signum(x) (((x)<0.0)?(-1.0):(((x)>0.0)?(1.0):(0.0)))
 
+static double **tmpVector;
+static double *tmpMisVector;
+
+int realCompare(const void* aPtr, const void* bPtr)
+{
+  int aIndex = *(int*)aPtr;
+  int bIndex = *(int*)bPtr;
+
+  double aReal = tmpVector[aIndex/dist.ncols][aIndex%dist.ncols];
+  double bReal = tmpVector[bIndex/dist.ncols][bIndex%dist.ncols];
+  if ((tmpMisVector[aIndex] == DBL_MAX) && (tmpMisVector[bIndex] == DBL_MAX))  return 0;
+  if (tmpMisVector[aIndex] == DBL_MAX) return 1;
+  if (tmpMisVector[bIndex] == DBL_MAX) return -1;
+
+  if (aReal < bReal) return -1;
+  else if (aReal == bReal) return 0;
+  else return 1; 
+}
+
 /*
  * Perform one loop of the iterative mds function.
  *
@@ -145,12 +171,20 @@ double delta = 1.0/100000.0;
 void
 mds_once(Boolean doit, Boolean shepard, FILE* fpdat, FILE* fprow)
 {
-  int i, j, k;
+  int i, j, k, ii;
   static struct array pos_grad;
   static Boolean cleared_p = False;
   static int nactive_distances = -1, prev_nactive_distances = -1;
 
-  double d;
+  static double *trans_dist = NULL;
+  static int *trans_dist_index = NULL;
+  static int *b = NULL; /* blocklength for isotonic regression */
+
+  static int sortnecessary = 0;
+  short notfinished;
+  short stop;
+
+  double d, sum;
   double step_mag, step_dir;
   double gsum, psum, gfactor;
   int nchanged;
@@ -164,7 +198,20 @@ mds_once(Boolean doit, Boolean shepard, FILE* fpdat, FILE* fprow)
 
   extern int moving_point;
   int mp;
-  Boolean keep_going;
+
+  /* May 16 2001: preparation for isotonic regression */
+  if (trans_dist == NULL){
+    trans_dist = (double *) XtMalloc(dist.nrows * dist.ncols * sizeof(double));
+    trans_dist_index = (int *) XtMalloc(dist.nrows * dist.ncols * sizeof(int));
+    b = (int *) XtMalloc(dist.nrows * dist.ncols * sizeof(int));
+  }
+  for (i = 0 ; i < dist.nrows; i++) {
+    for (j = 0; j < dist.ncols; j++) {
+      trans_dist[i*dist.ncols+j] = DBL_MAX;
+      /*      trans_dist_index[i*dist.ncols+j] = i*dist.ncols+j;*/
+    } 
+  }
+  
 
   /* tried out linking D_ij^mds_power to ||x_i-x_j||^mds_weightpow:
      worked on morsecodes for powers between 1 and 2, 
@@ -199,41 +246,29 @@ mds_once(Boolean doit, Boolean shepard, FILE* fpdat, FILE* fprow)
 
   /* Find new locations based on saved ones. */
   for (i = 0; i < pos.nrows; i++) {    /* For each node. */
-    keep_going = True;
 
 /* testing dfs September */
-    if (xg->erased[i] == 1) {
-      keep_going = False;
-      for (k=0; k<mds_dims; k++)
-        pos.data[i][k] = 0;
-    }
-    if (!keep_going)
-      continue;  /* next i */
+    if (xg->erased[i] == 1) continue;
 
 /* testing dfs September -- this is how you find out if a point is excluded */
-    if (keep_going && xg->ncols == xg->ncols_used) {
-      if (xg->clusv[(int)GROUPID(i)].excluded == 1) {
-        keep_going = False;
-        for (k=0; k<mds_dims; k++)
-          pos.data[i][k] = 0;
-      }
-    }
-    if (!keep_going)
-      continue;  /* next i */
+    if (xg->ncols == xg->ncols_used) 
+      if (xg->clusv[(int)GROUPID(i)].excluded == 1) 
+        continue;
 
     for (j = 0; j < pos.nrows; j++) {  /* Check every pair ... */
 
       /* skip diagonal elements */
-      if (i == j)
-        ;
+      if (i == j) continue; 
 
       /* skip erased points */
-      else if(xg->erased[j] == 1)
-        ;
+      if(xg->erased[j] == 1) continue;
+
+      if (xg->ncols == xg->ncols_used)
+        if (xg->clusv[(int)GROUPID(j)].excluded == 1) 
+          continue;
 
       /* if the target distances are both missing, skip */
-      else if (dist.data[i][j] == DBL_MAX)
-        ;
+      if (dist.data[i][j] == DBL_MAX) continue;
 
       /*
        * if point i is selected for motion, skip over it:
@@ -249,42 +284,135 @@ mds_once(Boolean doit, Boolean shepard, FILE* fpdat, FILE* fprow)
        * if we're using groups, and these two points don't meet
        * our criteria, skip the pair
        */
-      else if (mds_group_ind == within && !SAMEGLYPH(i,j))
-        ;
-      else if (mds_group_ind == between && SAMEGLYPH(i,j))
-        ;
-      else if (mds_group_ind == anchored && !CURRENTGLYPH(j))
-        ;
-
+      if (mds_group_ind == within && !SAMEGLYPH(i,j)) continue;
+      if (mds_group_ind == between && SAMEGLYPH(i,j)) continue;
+      if (mds_group_ind == anchored && !CURRENTGLYPH(j)) continue;
 
       /*
        * If the target distance is within the thresholds
        * set using the barplot of distances, keep going.
        */
-      else if (dist.data[i][j] < mds_threshold_low || 
-           dist.data[i][j] > mds_threshold_high)
-        ;
-      else {
+      if (dist.data[i][j] < mds_threshold_low || 
+          dist.data[i][j] > mds_threshold_high) continue;
+
+
         nchanged++;  /* for threshold diagnostics, mostly */
 
         /* current pairwise distance */
+        trans_dist[i*dist.ncols+j] = distance(pos.data[i], pos.data[j], mds_dims, mds_lnorm);
+
+    } /* j */
+  } /* i */
+
+  if (nchanged > 0) {
+    if (scaling_method == NONMETRIC) {
+      /*      printf("before sorting:\n");
+       for(i = 0; i <dist.nrows; i++){
+        for (j = 0; j < dist.ncols; j++) {
+            printf ("%.3f\t",dist.data[trans_dist_index[i*dist.ncols+j]/dist.ncols][trans_dist_index[i*dist.ncols+j]%dist.ncols]);
+        }
+        printf("\n");
+        }*/
+      
+
+      tmpVector = dist.data;
+      tmpMisVector = trans_dist;
+      if (sortnecessary != nchanged) {
+        /*printf ("sorting data ...");*/
+        for (i = 0 ; i < dist.nrows; i++) {
+          for (j = 0; j < dist.ncols; j++) {
+            trans_dist_index[i*dist.ncols+j] = i*dist.ncols+j;
+          } 
+        }
+        Myqsort(trans_dist_index, dist.ncols*dist.nrows, sizeof(int),
+              realCompare);
+        sortnecessary = nchanged;
+        /*printf ("done\n");*/
+      }
+
+       /* start isotonic regression */
+      /* initialize block length */
+      i = 0;
+      for ( ; i < dist.nrows*dist.ncols; i++) {
+        if (trans_dist[trans_dist_index[i]] == DBL_MAX) continue;
+        ii = i+1;
+        while ((ii <  dist.nrows*dist.ncols)&&((trans_dist[trans_dist_index[ii]] == DBL_MAX) || 
+                (dist.data[trans_dist_index[ii]/dist.ncols][trans_dist_index[ii]%dist.ncols]
+                 ==dist.data[trans_dist_index[i]/dist.ncols][trans_dist_index[i]%dist.ncols]))){
+          ii++;
+        }
+        /* ii points to start of the next block */
+        b[i] = ii-i;
+        sum = 0;
+
+        for (k = i; k < ii; k++) {
+          if (trans_dist[trans_dist_index[k]] != DBL_MAX) {
+            sum += trans_dist[trans_dist_index[k]];
+          }
+        }
+
+        if (b[i] > 1) {
+          sum /= b[i];
+          for (k = i; k < ii; k++) {
+            if (trans_dist[trans_dist_index[k]] != DBL_MAX)
+              trans_dist[trans_dist_index[k]] = sum;
+          }
+          i += b[i]-1;
+        }
+      }
+
+      notfinished = 1;
+      while (notfinished > 0) {
+        notfinished = 0;
+        i = 0;
+
+        stop = 0;
+        while (!stop) {
+          ii = i+b[i];
+          if (ii < dist.nrows*dist.ncols) {
+            if (trans_dist[trans_dist_index[i]] > 
+                trans_dist[trans_dist_index[ii]])
+            {
+              notfinished = 1;
+              trans_dist[trans_dist_index[i]] = 
+                (trans_dist[trans_dist_index[i]]*b[i] + 
+                 trans_dist[trans_dist_index[ii]]*b[ii])/(b[i] + b[ii]);
+
+              b[i] += b[ii];
+            } else {
+              i += b[i];
+            }
+          } else stop = 1;
+        }
+      }
+ 
+      for (i=0; i < dist.nrows*dist.ncols; i++) {
+        for (j = i+1; j < i+b[i]; j++) {
+          trans_dist[trans_dist_index[j]] = trans_dist[trans_dist_index[i]];
+        }
+        i += b[i]-1;
+      }
+      
+      for (i = 0; i < dist.nrows; i++) {
+        for (j = 0; j < dist.ncols; j++) {
+          if (trans_dist[i*dist.ncols+j] != trans_dist[j*dist.ncols+i])
+            printf ("assymetric in f(d): %d %d \n",i,j);
+        }
+      }
+    }
+
+    for (i = 0; i < pos.nrows; i++) {
+      for (j = 0; j < pos.nrows; j++) {
+        if (trans_dist[i*dist.ncols+j]  ==  DBL_MAX) continue;
         d = distance(pos.data[i], pos.data[j], mds_dims, mds_lnorm);
-
-    /*
-     * dist_goal could be precomputed whenever p changes and stored;
-     * there's a lot of extra calculation going on here
-     */
-
-    /*
-    printf("i=%d: %d  j=%d: %d \n", i, xg->erased[i], j, xg->erased[j]);
-    */
 
         resid = 0.0;
         weight = 0.0;
         dist_goal = 0.0;
 
         if (dist.data[i][j] != DBL_MAX) {
-          dist_goal = pow(dist.data[i][j], mds_power);
+          if (scaling_method == NONMETRIC) dist_goal = trans_dist[i*dist.ncols+j];
+          else dist_goal = pow(dist.data[i][j], mds_power);
           if(dist.data[i][j] > 1E-5) 
             weight = pow(dist.data[i][j], mds_weightpow);
           else weight = pow(1E-5, mds_weightpow);
@@ -336,9 +464,10 @@ mds_once(Boolean doit, Boolean shepard, FILE* fpdat, FILE* fprow)
 
           } /* distance non-zero */
         } /* residual non-zero */
-      } /* target is within thresholds. */
-    } /* j */
-  } /* i */
+      } /* loop over j end */
+    } /* loop over i end */
+  }
+
 
   if (doit && nchanged > 0) {
 

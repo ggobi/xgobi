@@ -1037,7 +1037,6 @@ princ_comp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
     else
     {
        printf("in copy_tform_to_sphered \n");
-       
        copy_tform_to_sphered(xg);
     }
     if (singular_vc)
@@ -1071,7 +1070,7 @@ princ_comp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
       /* need to spherize data here. */
       /* set the shp_vars to the active vars, and set the tform type to sphere */
       for (k=0; k<xg->numvars_t; k++)
-	xg->sph_vars[k] = xg->tour_vars[k];
+        xg->sph_vars[k] = xg->tour_vars[k];
       xg->nsph_vars = xg->numvars_t;
       set_sph_tform_tp(xg);
 
@@ -3505,19 +3504,14 @@ spherize_data(xgobidata *xg, int num_pcs, int nsvars, int *svars)
   printf("\n");
   */
 
-  for (m=0; m<xg->nrows_in_plot; m++)
-  {
+  for (m=0; m<xg->nrows_in_plot; m++) {
     i = xg->rows_in_plot[m];
 
-    for (j=0; j<num_pcs; j++)
-    {
+    for (j=0; j<num_pcs; j++) {
       tmpf = 0.;
-      for (k=0; k<nsvars; k++)
-      {
+      for (k=0; k<nsvars; k++) {
         tmpf = tmpf +
-             vc_active[k][j] *
-             (xg->tform1[i][svars[k]] -
-               mean[svars[k]]);
+          vc_active[k][j] * (xg->tform1[i][svars[k]] - mean[svars[k]]);
       }
       tmpf /= (eigenval[j]);
       b[0][j] = tmpf;
@@ -3540,24 +3534,19 @@ compute_vc_matrix(xgobidata *xg)
   /* bug fix, for sphering transformation: 
      this routine needs to use tform1 not tform2 */
 /* calculate mean vector */
-  for (i=0; i<p; i++)
-  {
+  for (i=0; i<p; i++) {
     tmpf = 0.;
-    for (j=0; j<n; j++)
-    {
+    for (j=0; j<n; j++) 
       tmpf += xg->tform1[xg->rows_in_plot[j]][i];
-    }
     tmpf /= n;
     mean[i] = tmpf;
   }
 
 /* calculate variance-covariance matrix */
-  for (i=0; i<p; i++)
-    for (j=i; j<p; j++)
-    {
+  for (i=0; i<p; i++) {
+    for (j=i; j<p; j++) {
       tmpf = 0.;
-      for (k=0; k<n; k++)
-      {
+      for (k=0; k<n; k++) {
         tmpf = tmpf +
              (xg->tform1[xg->rows_in_plot[k]][i] - mean[i]) *
              (xg->tform1[xg->rows_in_plot[k]][j] - mean[j]);
@@ -3566,6 +3555,7 @@ compute_vc_matrix(xgobidata *xg)
       vc[i][j] = tmpf;
       vc[j][i] = vc[i][j];
     }
+  }
 
 }
 

@@ -138,12 +138,14 @@ RPCOBJ =
 XGOBISRC = xgobi.c $(JOINTSRC) $(RPCSRC) $(CORBASRC)
 XGOBIOBJ = xgobi.o $(JOINTOBJ) $(RPCOBJ) $(CORBAOBJ)
 
-XGVISSRC = xgvis.c xgv_dissim.c xgv_mds.c \
+XGVISSRC = xgvis.c xgv_dissim.c xgv_qsort.c xgv_mds.c \
 	xgv_molecule.c xgv_read_data.c xgv_help.c \
 	xgv_stress.c xgv_cbacks.c xgv_widgets.c $(JOINTSRC) 
-XGVISOBJ = xgvis.o xgv_dissim.o xgv_mds.o \
+XGVISOBJ = xgvis.o xgv_dissim.o xgv_qsort.o xgv_mds.o \
 	xgv_molecule.o xgv_read_data.o xgv_help.o \
 	xgv_stress.o xgv_cbacks.o xgv_widgets.o $(JOINTOBJ) 
+
+#	xgv_qsort.c isotonic.c xgv_mds_a.c xgv_mds \
 
 all:: xgvis xgobi
 
