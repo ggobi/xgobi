@@ -360,7 +360,7 @@ init_file_rows_sampled(xgobidata *xg) {
 
 static Boolean
 seek_to_file_row(int array_row, FILE *fp, xgobidata *xg) {
-  int i, ch, file_row;
+  int i, file_row, ch;  /* ch is used, no matter what the compiler says */
   static int prev_file_row = 0;
   Boolean ok = true;
 
@@ -808,13 +808,13 @@ read_array(xgobidata *xg)
 {
   char fname[128];
   FILE *fp;
+  static char *suffixes[] = {".dat", ""};
 
 /*
  * Check file exists and open it - for stdin no open needs to be done
  * only assigning fp to be stdin.
 */
-  if (strcmp((char *) xg->datafname, "stdin") == 0)
-  {
+  if (strcmp((char *) xg->datafname, "stdin") == 0) {
     fp = stdin;
 
     /*
@@ -828,8 +828,7 @@ read_array(xgobidata *xg)
     }
     read_ascii(fp, xg);
   }
-  else
-  {
+  else {
     /* 
      * Are we reading the missing data into xg->raw_data ?
     */
@@ -838,8 +837,7 @@ read_array(xgobidata *xg)
          &xg->datafilename[strlen(xg->datafilename) - strlen(".missing")]
        ) == 0)
     {
-      if ((fp = fopen(xg->datafilename, "r")) != NULL)
-      {
+      if ((fp = fopen(xg->datafilename, "r")) != NULL) {
         char *title, fulltitle[256];
         xg->is_missing_values_xgobi = True;
         xg->missing_values_present = True;
@@ -889,22 +887,12 @@ read_array(xgobidata *xg)
       */
       else
       {
-        /* Try fname.dat first, then fname without a suffix */
-        strcpy(fname, (char *) xg->datafname);
-        strcat(fname, ".dat");
-        if ((fp = fopen(fname, "r")) == NULL)
-        {
-          if ((fp = fopen((char *) xg->datafname, "r")) == NULL)
-          {
-            (void) fprintf(stderr,
-              "Neither the file %s nor %s exists\n", xg->datafname, fname);
-            exit(0);
-          }
-          else
-            read_ascii(fp, xg);
-        }
-        else
-          read_ascii(fp, xg);
+        fp = open_xgobi_file((char *) xg->datafname, 2, suffixes, "r", false);
+
+        if (fp == NULL)
+          exit(0);
+
+        read_ascii(fp, xg);
       }
     }
   }

@@ -4,7 +4,8 @@
 /**/#	the random number generator.
 /**/#
 
-/**/# Remove the comment delimeters on the second to next line to compile for CORBA.
+/**/# Remove the comment delimeters on the second to next line to
+/**/# compile for CORBA.
 /**/# Requires some Omegahat code - see README.corba.
 /**/#define USE_CORBA 1
 
@@ -21,21 +22,16 @@
 #EXTRA_LDOPTIONS = -static
       # for gcc
       #CCOPTIONS = -ansi -w -DDEBUG
-#      CCOPTIONS = -xansi -DDEBUG -w
+       CCOPTIONS = -xansi -DDEBUG
 
 /**/#  Choose a random number generator, random or drand48
                R = USE_RANDOM
               #R = USE_DRAND48
 
 
-
-
 #ifdef USE_CORBA
 #include "Makefile.corba"
 #endif   /* End of USE_CORBA */
-
-
-
 
 
 /**/#

@@ -219,41 +219,69 @@ choose_color_cback (Widget w, xgobidata *xg, XtPointer callback_data)
 void
 reinit_brush_colors(xgobidata *xg)
 {
-  color_nums[ncolors] = plotcolors.fg;
-  color_names[ncolors] = "Default";
-  color_menu_btn[ncolors+1] = XtVaCreateManagedWidget("Command",
-    smeBSBObjectClass, color_menu,
-    XtNlabel, (String) color_names[ncolors],
-    XtNleftMargin, (Dimension) 24,
-    XtNforeground, color_nums[ncolors],
-    NULL);
-  XtAddCallback(color_menu_btn[ncolors+1], XtNcallback,
-    (XtCallbackProc) choose_color_cback, (XtPointer) xg);
-  ncolors++;
+  int j;
+  Boolean fg_present = false, bg_present = false;
 
-  color_nums[ncolors] = plotcolors.bg;
-  color_names[ncolors] = "<Background color>";
-  color_menu_btn[ncolors+1] = XtVaCreateManagedWidget("Command",
-    smeBSBObjectClass, color_menu,
-    XtNlabel, (String) color_names[ncolors],
-    XtNleftMargin, (Dimension) 24,
-    XtNforeground, plotcolors.fg,
-    NULL);
-  XtAddCallback(color_menu_btn[ncolors+1], XtNcallback,
-    (XtCallbackProc) choose_color_cback, (XtPointer) xg);
-  ncolors++;
+  /*
+   * Find out whether the foreground and background colors of the
+   * plot_window are included in the brushing colors.  If not, then
+   * append them to the list of colors and add them to the color
+   * brushing menu.
+  */
+  for (j=0; j<ncolors; j++) {
+    if (color_nums[j] == plotcolors.fg)
+      fg_present = true;
+    else if (color_nums[j] == plotcolors.bg)
+      bg_present = true;
+  }
+
+  if (!bg_present) {
+    color_nums[ncolors] = plotcolors.fg;
+    color_names[ncolors] = "Default";
+    color_menu_btn[ncolors+1] = XtVaCreateManagedWidget("Command",
+      smeBSBObjectClass, color_menu,
+      XtNlabel, (String) color_names[ncolors],
+      XtNleftMargin, (Dimension) 24,
+      XtNforeground, color_nums[ncolors],
+      NULL);
+    XtAddCallback(color_menu_btn[ncolors+1], XtNcallback,
+      (XtCallbackProc) choose_color_cback, (XtPointer) xg);
+    ncolors++;
+  }
+
+  if (!fg_present) {
+    color_nums[ncolors] = plotcolors.bg;
+    color_names[ncolors] = "<Background color>";
+    color_menu_btn[ncolors+1] = XtVaCreateManagedWidget("Command",
+      smeBSBObjectClass, color_menu,
+      XtNlabel, (String) color_names[ncolors],
+      XtNleftMargin, (Dimension) 24,
+      XtNforeground, plotcolors.fg,
+      NULL);
+    XtAddCallback(color_menu_btn[ncolors+1], XtNcallback,
+      (XtCallbackProc) choose_color_cback, (XtPointer) xg);
+    ncolors++;
+  }
 
   if (ncolors > NCOLORS+2)
     fprintf(stderr, "Error in reinit_brush_colors: Too many colors\n");
 }
 
+/*
+ * 1-5     +
+ * 6-10    x
+ * 11-15   orect
+ * 16-20   crect
+ * 21-25   ocirc
+ * 26-30   ccirc
+ * 31      point
+*/
 void
 find_glyph_type_and_size(int gid, glyphv *glyph)
 {
-  glyph->type = ( (gid-1) / (int) NGLYPHSIZES ) + 1 ;
-  glyph->size = ( (gid-1) % (int) NGLYPHSIZES ) + 1 ;
+  glyph->type = ( (gid-1) / NGLYPHSIZES ) + 1 ;
+  glyph->size = ( (gid-1) % NGLYPHSIZES ) + 1 ;
 }
-
 
 static Boolean
 choose_glyph(xgobidata *xg, int glyph_btn)

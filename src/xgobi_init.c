@@ -25,7 +25,6 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 
 #include "xincludes.h"
 #include "xgobitypes.h"
@@ -266,6 +265,225 @@ set_wm_protocols(Widget w)
      &wm_delete_window, 1);
 }
 
+static void
+init_atoms() {
+
+  /*
+   * Initialize Atoms used to pass xg->rows_in_plot
+  */
+  XG_ROWSINPLOT_ANNC = XInternAtom(display, "Announce Rows in Plot", 0);
+  XG_ROWSINPLOT_ANNC_TYPE = XInternAtom(display,
+    "Announce Rows in Plot Type", 0);
+  XG_ROWSINPLOT = XInternAtom(display, "Rows in Plot", 0);
+  XG_ROWSINPLOT_TYPE = XInternAtom(display, "Rows in Plot Type", 0);
+
+  /*
+   * Initialize Atoms used to pass xg->erased
+  */
+  XG_ERASE_ANNC = XInternAtom(display, "Announce Erase", 0);
+  XG_ERASE_ANNC_TYPE = XInternAtom(display, "Announce Erase Type", 0);
+  XG_ERASE = XInternAtom(display, "Erase", 0);
+  XG_ERASE_TYPE = XInternAtom(display, "Erase Type", 0);
+
+  /*
+   * Initialize Atoms used in linked glyph and color brushing;
+   * points only.
+  */
+  XG_NEWPAINT_ANNC = XInternAtom(display, "Announce New Paint", 0);
+  XG_NEWPAINT_ANNC_TYPE = XInternAtom(display, "Announce New Paint Type", 0);
+  XG_NEWPAINT = XInternAtom(display, "New Paint", 0);
+  XG_NEWPAINT_TYPE = XInternAtom(display, "New Paint Type", 0);
+
+  /*
+   * Initialize Atoms used in linked line brushing.
+  */
+  XG_NEWLINEPAINT_ANNC = XInternAtom(display, "Announce New Line Paint", 0);
+  XG_NEWLINEPAINT_ANNC_TYPE = XInternAtom(display,
+    "Announce New Line Paint Type", 0);
+  XG_NEWLINEPAINT = XInternAtom(display, "New Line Paint", 0);
+  XG_NEWLINEPAINT_TYPE = XInternAtom(display, "New Line Paint Type", 0);
+
+  /*
+   * Initialize Atoms used in linked identification.
+  */
+  XG_IDS_ANNC = XInternAtom(display, "Announce NearestPoint", 0);
+  XG_IDS_ANNC_TYPE = XInternAtom(display, "Announce NearestPoint Type", 0);
+  XG_IDS = XInternAtom(display, "NearestPoint", 0);
+  XG_IDS_TYPE = XInternAtom(display, "NearestPoint Type", 0);
+
+  /*
+   * Initialize Atoms used in linked touring.
+  */
+  XG_NEWTOUR_ANNC = XInternAtom(display, "Announce New Tour Coefs", 0);
+  XG_NEWTOUR_ANNC_TYPE = XInternAtom(display,
+    "Announce New Tour Coefs Type", 0);
+  XG_NEWTOUR = XInternAtom(display, "New Tour Coefs", 0);
+  XG_NEWTOUR_TYPE = XInternAtom(display, "New Tour Coefs Type", 0);
+}
+
+static Boolean
+get_data_from_parent(char *data_in, float **datap,
+  Boolean missingpflag, short **missingp,
+  Boolean mv_is_missing_values_xgobi, int mv_nmissing, 
+  int nlines, connect_lines *connecting_lines,
+  int nr, char **rowp, int nc, char **colp,
+  Boolean firsttime, xgobidata *xg)
+{
+
+/*
+ * Parent can override previous definitions made in
+ *  set_title_and_icon()
+ * These set on command line:
+ *  nrows, nrows_in_plot, ncols, nlines, raw_data[]
+ *  collab[], rowlab[]
+ *  connecting_lines[]
+ * Where can these come from? Parent must allocate?
+ *  collab_tform1[]
+ *  collab_tform2[]
+ *  nlinkable
+ *  vgroup_ids[]
+ *  erased[]
+ *  delete_erased_pts
+ * Parent could handle read_extra_resources() in some other way.
+*/
+  int ok = true;
+  int i, j;
+  int ncols_prev;
+
+  if (!firsttime)
+    ncols_prev = xg->ncols;
+
+/*
+ * Define nrows, ncols
+*/
+
+  xg->nrows = nr;
+  if (xg->nrows_in_plot < 2 || xg->nrows_in_plot > nr)
+    xg->nrows_in_plot = nr;
+  if (data_in != NULL)
+    xg->nrows_in_plot = nr;
+
+  xg->ncols = nc;
+  xg->ncols_used = nc-1;
+
+  if (xg->nrows < 1 || xg->ncols_used < 1 || datap == NULL) {
+    (void) fprintf(stderr, "problem with input data\n");
+    ok = false;
+    return(ok);
+  }
+
+/*
+ * Allocate and copy raw data.  (why not just pass the pointer?)
+*/
+
+  xg->raw_data = (float **) XtMalloc ((Cardinal) xg->nrows *
+    sizeof (float *));
+  for (i = 0; i < xg->nrows; i++)
+    xg->raw_data[i] = (float *) XtMalloc ((Cardinal) xg->ncols *
+    sizeof (float));
+
+  for (i = 0; i < xg->nrows; i++)
+    for (j = 0; j < xg->ncols_used; j++)
+      xg->raw_data[i][j] = datap[i][j];
+
+/*
+ * Deal with missing data
+*/
+
+  if (missingpflag) {
+    if (missingp == NULL) {
+      (void) fprintf(stderr,
+        "problem with missing values arrays in input data\n");
+      ok = false;
+      return(ok);
+    }
+    xg->is_missing = (short **) XtMalloc ((Cardinal) xg->nrows *
+      sizeof (short *));
+    for (i = 0; i < xg->nrows; i++)
+      xg->is_missing[i] = (short *) XtMalloc ((Cardinal) xg->ncols *
+      sizeof (short));
+
+    for (i = 0; i < xg->nrows; i++) /* copy missings from missingp */
+      for (j = 0; j < xg->ncols_used; j++)
+        xg->is_missing[i][j] = missingp[i][j];
+
+    xg->missing_values_present = True;
+    xg->is_missing_values_xgobi = False;
+    xg->nmissing = mv_nmissing;
+  }
+  else {
+    xg->missing_values_present = False;
+    xg->is_missing_values_xgobi = mv_is_missing_values_xgobi;
+  }
+
+/*
+ * Populate extra column
+*/
+  fill_extra_column(xg);
+
+/*
+ * For now, force each column to be its own group.
+ * The group ids have to be sorted, and the first one
+ * has to be zero.  (numvargroups is awfully stupid)
+*/
+  read_vgroups(xg->datafname, True, xg);
+
+/* For row groups, I'm going to try just setting the number */
+  xg->nrgroups = 0;
+
+/*
+ * Assume the links will always be supplied.
+*/
+  xg->nlines = nlines;
+  xg->connecting_lines = connecting_lines ;
+
+/*
+ * Allocate and populate row and column labels
+*/
+
+/* I probably just broke this -- dfs */
+  alloc_rowlabels(xg);
+  if (rowp)                         /* Copy labels */
+    for (i = 0; i< xg->nrows; i++)
+       strcpy(xg->rowlab[i], rowp[i]);
+  else                              /* Use default row labels */
+    for (i=0; i<xg->nrows; i++)
+      (void) sprintf(xg->rowlab[i], "%d", i+1);
+
+  alloc_collabels(xg);
+  if (colp)
+    for (i = 0; i<xg->ncols_used; i++) {
+       strcpy(xg->collab[i], colp[i]);
+      (void) sprintf(xg->collab_short[i], "V%d", i+1);  /* for now */
+    }
+  else
+    for (i=0; i<xg->ncols; i++) {
+      (void) sprintf(xg->collab[i], "Var %d", i+1);
+      (void) sprintf(xg->collab_short[i], "V%d", i+1);
+    }
+
+  /*
+   * Set the label for the last variable
+  */
+  strcpy(xg->collab[xg->ncols-1], "group");
+
+  /*
+   * Copy collab into the collab_tform arrays
+  */
+  for (j=0; j<xg->ncols; j++) {
+    (void) strcpy(xg->collab_tform1[j], xg->collab[j]);
+    (void) strcpy(xg->collab_tform2[j], xg->collab[j]);
+  }
+
+  if (! firsttime)
+    destroy_varsel_widgets(ncols_prev, xg);
+
+  xg->nlinkable = xg->nrows;
+
+  return ok;
+}
+
+
 int
 make_xgobi(Boolean datapflag, char *data_in, float **datap, char *xgobi_title,
 Boolean missingpflag, short **missingp, Boolean mv_is_missing_values_xgobi,
@@ -295,42 +513,27 @@ xgobidata *xg, Widget parent)
   Widget parent;
 */
 {
-  int i, j;
-  int wkfg = 0;
+  int i;
   Colormap cmap;
   XColor cfore, cback, exact;
   static int firsttime = 1;
-  int ncols_prev;
-
-  if (! firsttime)
-    ncols_prev = xg->ncols;
-
-  /*
-   * Create the shell if it hasn't already been created.
-  */
-  if (parent && firsttime)
-    xg->shell = XtVaCreatePopupShell("XGobi",
-       topLevelShellWidgetClass, parent,
-       NULL);
-
-  /*
-   * Move this to the beginning so it's been executed by
-   * the time the first data values are read in.
-  */
-
-#ifdef USE_DRAND48
-  /* initialize a seed for drand48() and lrand48() */
-  (void) srand48((long) time((long *) 0));
-#else
-  /* initialize a seed for random(); */
-  srandom((int) time((long *) 0));
-#endif
-
+  extern void init_random_seed(void);
 
   xg->is_realized = False;
 
   if (firsttime)
   {
+    /*
+     * Create the shell if it hasn't already been created.
+    */
+    if (parent)
+      xg->shell = XtVaCreatePopupShell("XGobi",
+         topLevelShellWidgetClass, parent,
+         NULL);
+  
+    init_random_seed();  /* before any data values are read */
+    init_atoms();
+
     /*
      * Initialize the strings in the save_types[] array.
     */
@@ -342,72 +545,20 @@ xgobidata *xg, Widget parent)
     READ_POINT_COLORS_GLYPHS = "read brush vec";
     READ_TOUR_HIST = "tour readhist";
     OPEN_BITMAP_FILE = "open bitmap file";
-
-    /*
-     * Initialize Atoms used to pass xg->rows_in_plot
-    */
-    XG_ROWSINPLOT_ANNC = XInternAtom(display, "Announce Rows in Plot", 0);
-    XG_ROWSINPLOT_ANNC_TYPE = XInternAtom(display,
-      "Announce Rows in Plot Type", 0);
-    XG_ROWSINPLOT = XInternAtom(display, "Rows in Plot", 0);
-    XG_ROWSINPLOT_TYPE = XInternAtom(display, "Rows in Plot Type", 0);
-
-    /*
-     * Initialize Atoms used to pass xg->erased
-    */
-    XG_ERASE_ANNC = XInternAtom(display, "Announce Erase", 0);
-    XG_ERASE_ANNC_TYPE = XInternAtom(display, "Announce Erase Type", 0);
-    XG_ERASE = XInternAtom(display, "Erase", 0);
-    XG_ERASE_TYPE = XInternAtom(display, "Erase Type", 0);
-
-    /*
-     * Initialize Atoms used in linked glyph and color brushing;
-     * points only.
-    */
-    XG_NEWPAINT_ANNC = XInternAtom(display, "Announce New Paint", 0);
-    XG_NEWPAINT_ANNC_TYPE = XInternAtom(display, "Announce New Paint Type", 0);
-    XG_NEWPAINT = XInternAtom(display, "New Paint", 0);
-    XG_NEWPAINT_TYPE = XInternAtom(display, "New Paint Type", 0);
-
-    /*
-     * Initialize Atoms used in linked line brushing.
-    */
-    XG_NEWLINEPAINT_ANNC = XInternAtom(display, "Announce New Line Paint", 0);
-    XG_NEWLINEPAINT_ANNC_TYPE = XInternAtom(display,
-      "Announce New Line Paint Type", 0);
-    XG_NEWLINEPAINT = XInternAtom(display, "New Line Paint", 0);
-    XG_NEWLINEPAINT_TYPE = XInternAtom(display, "New Line Paint Type", 0);
-
-    /*
-     * Initialize Atoms used in linked identification.
-    */
-    XG_IDS_ANNC = XInternAtom(display, "Announce NearestPoint", 0);
-    XG_IDS_ANNC_TYPE = XInternAtom(display, "Announce NearestPoint Type", 0);
-    XG_IDS = XInternAtom(display, "NearestPoint", 0);
-    XG_IDS_TYPE = XInternAtom(display, "NearestPoint Type", 0);
-
-    /*
-     * Initialize Atoms used in linked touring.
-    */
-    XG_NEWTOUR_ANNC = XInternAtom(display, "Announce New Tour Coefs", 0);
-    XG_NEWTOUR_ANNC_TYPE = XInternAtom(display,
-      "Announce New Tour Coefs Type", 0);
-    XG_NEWTOUR = XInternAtom(display, "New Tour Coefs", 0);
-    XG_NEWTOUR_TYPE = XInternAtom(display, "New Tour Coefs Type", 0);
-
   }
 
+  /*
+   * xg->datafilename is the full file name including path and suffixes
+   * xg->datafname is the name of the data file without any suffixes
+  */
   if (data_in != NULL) {
-    /* xg->datafilename is the full file name including path and suffixes */
     strcpy(xg->datafilename, data_in);
-    /* xg->datafname is the name of the data file without any suffixes */
     (void) strip_suffixes(xg);
   }
   else {
     xg->datafilename[0] = '\0';
     xg->datafname[0] = '\0';
   }
-
 
   /*
    * Read data-specific resource file and merge all resources.
@@ -433,179 +584,12 @@ xgobidata *xg, Widget parent)
   */
   if (parent && datapflag)
   {
-   /*
-    * Parent can override previous definitions made in
-    *  set_title_and_icon()
-    * These set on command line:
-    *  nrows, nrows_in_plot, ncols, nlines, raw_data[]
-    *  collab[], rowlab[]
-    *  connecting_lines[]
-    * Where can these come from? Parent must allocate?
-    *  collab_tform1[]
-    *  collab_tform2[]
-    *  nlinkable
-    *  vgroup_ids[]
-    *  erased[]
-    *  delete_erased_pts
-    * Parent could handle read_extra_resources() in some other way.
-   */
+    get_data_from_parent(data_in, datap,
+      missingpflag, missingp, mv_nmissing, mv_nmissing,
+      nlines, connecting_lines,
+      nr, rowp, nc, colp, firsttime, xg);
 
-    xg->nrows = nr;
-    if (xg->nrows_in_plot < 2 || xg->nrows_in_plot > nr)
-      xg->nrows_in_plot = nr;
-    if (data_in != NULL)
-      xg->nrows_in_plot = nr;
-
-    xg->ncols = nc;
-    xg->ncols_used = nc-1;
-
-    if (xg->nrows < 1 || xg->ncols_used < 1 || datap == NULL) {
-      (void) fprintf(stderr, "problem with input data\n");
-      return(0);
-    }
-
-    xg->raw_data = (float **) XtMalloc ((Cardinal) xg->nrows *
-      sizeof (float *));
-    for (i = 0; i < xg->nrows; i++)
-      xg->raw_data[i] = (float *) XtMalloc ((Cardinal) xg->ncols *
-      sizeof (float));
-
-   /* copy data from datap */  /* why not just pass the pointer? */
-    for (i = 0; i < xg->nrows; i++)
-      for (j = 0; j < xg->ncols_used; j++)
-        xg->raw_data[i][j] = datap[i][j];
-
-    if (missingpflag) {
-      if (missingp == NULL) {
-        (void) fprintf(stderr,
-          "problem with missing values arrays in input data\n");
-        return(0);
-      }
-      xg->is_missing = (short **) XtMalloc ((Cardinal) xg->nrows *
-        sizeof (short *));
-      for (i = 0; i < xg->nrows; i++)
-        xg->is_missing[i] = (short *) XtMalloc ((Cardinal) xg->ncols *
-        sizeof (short));
-
-      for (i = 0; i < xg->nrows; i++) /* copy missings from missingp */
-        for (j = 0; j < xg->ncols_used; j++)
-          xg->is_missing[i][j] = missingp[i][j];
-
-      xg->missing_values_present = True;
-      xg->is_missing_values_xgobi = False;
-      xg->nmissing = mv_nmissing;
-    }
-    else {
-      xg->missing_values_present = False;
-      xg->is_missing_values_xgobi = mv_is_missing_values_xgobi;
-    }
-
-    /* Populate extra columns */
-    fill_extra_column(xg);
-
-    /*
-     * For now, force each column to be its own group.
-     * The group ids have to be sorted, and the first one
-     * has to be zero.  (numvargroups is awfully stupid)
-    */
-    read_vgroups(xg->datafname, True, xg);
-
-    /* For row groups, I'm going to try just setting the number */
-    xg->nrgroups = 0;
-
-    /*
-     * Assume the links will always be supplied.
-    */
-    xg->nlines = nlines;
-    xg->connecting_lines = connecting_lines ;
-
-/* I probably just broke this -- dfs */
-    if (rowp)
-    {
-      /* Allocate and copy row labels */
-      xg->rowlab = (char **) XtMalloc((Cardinal)
-          xg->nrows * sizeof (char *));
-      for (i=0; i<xg->nrows; i++)
-        xg->rowlab[i] = (char *) XtMalloc((Cardinal)
-          ROWLABLEN * sizeof(char));
-
-      for (i = 0; i< xg->nrows; i++)
-         strcpy(xg->rowlab[i], rowp[i]);
-    }
-    else
-    {
-      /* Allocate and create default row labels */
-      xg->rowlab = (char **) XtMalloc((Cardinal)
-          xg->nrows * sizeof (char *));
-      for (i=0; i<xg->nrows; i++)
-        xg->rowlab[i] = (char *) XtMalloc((Cardinal)
-          ROWLABLEN * sizeof(char));
-
-      for (i=0; i<xg->nrows; i++)
-        (void) sprintf(xg->rowlab[i], "%d", i+1);
-    }
-
-    if (colp)
-    {
-      /* Allocate and copy column labels */
-      xg->collab = (char **) XtMalloc( (Cardinal)
-        xg->ncols * sizeof (char *));
-      for (j=0; j<xg->ncols; j++)
-        xg->collab[j] = (char *) XtMalloc( (Cardinal)
-          COLLABLEN * sizeof(char));
-
-      for (i = 0; i<xg->ncols_used; i++)
-         strcpy(xg->collab[i], colp[i]);
-    }
-    else
-    {
-      /* Allocate and create default column labels */
-      xg->collab = (char **) XtMalloc( (Cardinal)
-        xg->ncols * sizeof (char *));
-      for (j=0; j<xg->ncols; j++)
-        xg->collab[j] = (char *) XtMalloc( (Cardinal)
-          COLLABLEN * sizeof(char));
-
-      for (i=0; i<xg->ncols; i++)
-        (void) sprintf(xg->collab[i], "Var %d", i+1);
-    }
-
-    /*
-     * Set the label for the last variable
-    */
-    strcpy(xg->collab[xg->ncols-1], "group");
-
-    /*
-     * Allocate collab_tform and copy collab into it.
-    */
-    xg->collab_tform1 = (char **) XtMalloc(
-        (Cardinal) (xg->ncols) * sizeof (char *));
-    xg->collab_tform2 = (char **) XtMalloc(
-        (Cardinal) (xg->ncols) * sizeof (char *));
-    for (j=0; j<xg->ncols; j++) {
-      xg->collab_tform1[j] = (char *) XtMalloc(
-        (Cardinal) (COLLABLEN+16) * sizeof(char));
-      xg->collab_tform2[j] = (char *) XtMalloc(
-        (Cardinal) (COLLABLEN+2*16) * sizeof(char));
-
-      (void) strcpy(xg->collab_tform1[j], xg->collab[j]);
-      (void) strcpy(xg->collab_tform2[j], xg->collab[j]);
-    }
-
-    (void) read_erase(xg->datafname, True, xg);
-    (void) read_nlinkable(xg->datafname, True, xg);
-
-    xg->last_forward = (int *) XtMalloc(
-      (Cardinal) xg->nrows * sizeof(int));
-    for (i=0; i<xg->nrows; i++)
-      xg->last_forward[i] = -1;
-
-   if (! firsttime)
-      destroy_varsel_widgets(ncols_prev, xg);
-
-  /*
-   * End of xgobi-as-subroutine section for supplied data
-  */
+    read_erase(xg->datafname, True, xg);
   }
   else
   {
@@ -615,7 +599,10 @@ xgobidata *xg, Widget parent)
     xg->is_missing_values_xgobi = False;
     xg->is_missing = (short **) NULL;
 
-    /* Read input data files */
+    /*
+     * Read input data files
+    */
+
     if (xg->data_mode == Sprocess)
       (void) Sread_array(xg); /* it doesn't matter which file name */
     else if (xg->data_mode == ascii || xg->data_mode == binary) /* if not S */
@@ -627,48 +614,35 @@ xgobidata *xg, Widget parent)
       fill_extra_column(xg);
     }
 
-    /* This could have been preset in xgobi.c (or xgvis.c or other template);
-     * make sure it's sensible.
+    /*
+     * nrows_in_plot can be preset in xgobi.c; make sure it's sensible.
     */
     if (xg->nrows_in_plot < 2 || xg->nrows_in_plot > xg->nrows)
       xg->nrows_in_plot = xg->nrows;
 
-    xg->last_forward = (int *) XtMalloc(
-      (Cardinal) xg->nrows * sizeof(int));
-    for (i=0; i<xg->nrows; i++)
-      xg->last_forward[i] = -1;
-
     (void) read_collabels(xg->datafname, True, xg);
     (void) read_rowlabels(xg->datafname, True, xg);
   
-    if (!xg->is_missing_values_xgobi && !xg->is_scatmat) {
+    if (xg->is_missing_values_xgobi || xg->is_scatmat)
+      init_single_vgroup(xg);  /* force all variable into one group */
+    else
       read_vgroups(xg->datafname, True, xg);
-    }
-    else {
-      /*
-       * Override the local .vgroups file;
-       * force all variables into the same group.
-      */
-      xg->vgroup_ids = (int *) XtMalloc(
-        (Cardinal) xg->ncols * sizeof(int));
-      for (j=0; j<xg->ncols; j++)
-        xg->vgroup_ids[j] = 0;
-    }
-  
+
     (void) read_nlinkable(xg->datafname, True, xg);
+    (void) read_erase(xg->datafname, True, xg);
     read_rgroups(xg->datafname, True, xg);
 
-    if (!xg->is_scatmat)
+    if (!xg->is_scatmat) {
       (void) read_connecting_lines(xg->datafname, True, xg);
-
-    /* After rgroups are set and lines have been read, set line groups */
-    if (!xg->is_scatmat)
       set_lgroups(True, xg);
-  
-    (void) read_erase(xg->datafname, True, xg);
-
-    xg->xgobi_is_up = True;
+    }
   }
+
+  xg->last_forward = (int *) XtMalloc((Cardinal) xg->nrows * sizeof(int));
+  for (i=0; i<xg->nrows; i++)
+    xg->last_forward[i] = -1;
+
+  xg->xgobi_is_up = True;
 
   /*
    * Get the application foreground and background colors, as well
@@ -861,22 +835,7 @@ xgobidata *xg, Widget parent)
     set_br_opt_menu_marks(xg);
     set_id_linkopt_menu_marks(xg);
 
-    /*
-     * Find out whether the foreground color of the plot_window
-     * is included in the brushing colors.  If it is not, then
-     * append it to the list of colors and add it to the color
-     * brushing menu.
-    */
-    for (j=0; j<ncolors; j++)
-    {
-      if (color_nums[j] == plotcolors.fg)
-      {
-        wkfg = 1;
-        break;
-      }
-    }
-    if (!wkfg)
-      reinit_brush_colors(xg);
+    reinit_brush_colors(xg);
   }
 
   /*
@@ -933,13 +892,6 @@ xgobidata *xg, Widget parent)
   /* Draw the current glyph in the glyph workspace on the brush panel */
   draw_current_glyph(xg);
 
-  /*
-   * Reset the tour link menu label to the correct one;
-   * it was initialized using the longest one rather than
-   * the correct one.
-  */
-  reset_tour_link_menu(xg);
-
   if (parent)
   {
     XtPopup(xg->shell, XtGrabNone);
@@ -962,27 +914,21 @@ xgobidata *xg, Widget parent)
     xg->xy_vars.x = 0; /* do not swap x & y axis */
     xg->xy_vars.y = 1;
 
-/*
-    set_title_and_icon (xg->clone_Name, xg);
-*/
     strcpy (xg->datafilename, xg->clone_Name);
 
-    if (xg->clone_Type == CDF1)
-    {
+    if (xg->clone_Type == CDF1) {
       xg->xy_vars.x = 1; /* swap x & y axis */
       xg->xy_vars.y = 0;
     }
 
     /* disable options not required for cdf mode */
-    if ((xg->clone_Type == CDF1) || (xg->clone_Type == CDFm))
-    {
+    if ((xg->clone_Type == CDF1) || (xg->clone_Type == CDFm)) {
       set_Edit_Lines_cmd (xg, False);
       set_brush_menu_cmd (False);
     }
 
     /* Delete for cloning but not for copying */
-    if (xg->delete_clone_data)
-    {
+    if (xg->delete_clone_data) {
       sprintf (command, "rm /tmp/%s_%d_%d.* &", xg->datarootname,
         xg->clone_PID, xg->clone_Time);
       system (command);
@@ -1004,6 +950,7 @@ xgobidata *xg, Widget parent)
   */
   world_to_plane(xg);
   plane_to_screen(xg);
+
   /*
    * Initialize axes and ticks.
   */

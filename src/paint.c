@@ -269,6 +269,7 @@ void
 init_erase(xgobidata *xg)
 {
   int j;
+printf("(init_erase) nrows %d\n", xg->nrows);
 
   for (j=0; j<xg->nrows; j++)
     xg->erased[j] = 0;

@@ -224,6 +224,7 @@ make_tour_link_menu(xgobidata *xg, Widget parent, Widget vref)
   if (mono) set_mono(link_menu_cmd);
   add_menupb_help(&xg->nhelpids.menupb,
     link_menu_cmd, "Tour_Linking");
+  reset_tour_link_menu(xg);
 
   link_menu = XtVaCreatePopupShell("Menu",
     simpleMenuWidgetClass, link_menu_cmd,

@@ -1,3 +1,4 @@
+/* utils.c */
 /************************************************************
  *                                                          *
  *  Permission is hereby granted  to  any  individual   or  *
@@ -21,11 +22,25 @@
  *                                                          *
  ************************************************************/
 
+#include <stdio.h>
+#include <sys/stat.h>
 #include <limits.h>
 #include <math.h>
+#include <time.h>
 #include "xincludes.h"
 #include "xgobitypes.h"
 #include "xgobivars.h"
+
+void
+init_random_seed() {
+#ifdef USE_DRAND48
+  /* initialize a seed for drand48() and lrand48() */
+  (void) srand48((long) time((long *) 0));
+#else
+  /* initialize a seed for random(); */
+  srandom((int) time((long *) 0));
+#endif
+}
 
 
 double
@@ -60,9 +75,7 @@ rnorm2(double *drand, double *dsave) {
 }
 
 int
-find_selected_cols(xg, cols)
-  xgobidata *xg;
-  int *cols;
+find_selected_cols(xgobidata *xg, int *cols)
 {
   int i, ncols = 0;
 
@@ -95,14 +108,11 @@ find_selected_cols(xg, cols)
 }
 
 void
-add_vgroups(xg, cols, ncols)
+add_vgroups(xgobidata *xg, int *cols, int *ncols)
 /*
  * If one of the chosen columns is in a vgroup,
  * add its comrades (unless they're already present)
 */
-  xgobidata *xg;
-  int *cols;
-  int *ncols;
 {
   int nc = *ncols;
   int j, k, n;
@@ -248,4 +258,75 @@ int varno_from_name(xgobidata *xg, char *name) {
   }
   return varno;
 
+}
+
+/***************** opening files ************************/
+FILE *open_file(char *f, char *suffix, char *rw_ind)
+{
+  FILE *fp = NULL;
+  char fname[128];
+  struct stat buf;
+  Boolean found = false;
+
+  sprintf(fname, "%s%s", f, suffix);
+
+  found = (stat(fname, &buf) == 0);
+  if (found) {
+    if (S_ISDIR(buf.st_mode))
+      ;
+    else
+      fp = fopen(fname, rw_ind);
+  }
+
+  if (fp != NULL) {
+    /*
+     * Make sure it isn't an empty file -- get a single character
+    */
+    int ch = getc(fp);
+    if (ch == EOF) {
+      fprintf(stderr, "%s is an empty file!\n", fname);
+      fclose(fp);
+      fp = NULL;
+    } else ungetc(ch, fp);
+  }
+
+  return fp;
+}
+
+FILE *open_xgobi_file(char *fname, int nsuffixes, char **suffixes,
+  char *rw, Boolean optional)
+{
+  FILE *fp = NULL;
+  int n;
+
+  if (nsuffixes == 0)
+    fp = open_file(fname, "", rw);
+
+  else {
+    for (n=0; n<nsuffixes; n++) {
+      fp = open_file(fname, (char *) suffixes[n], rw);
+      if (fp != NULL) {
+        break;
+      }
+    }
+  }
+
+  if (fp == NULL && !optional) {
+    char errmsg[512], stmp[16];
+    if (nsuffixes > 0) {
+      sprintf(errmsg, "Unable to open ");
+      sprintf(stmp, " or ");
+      for (n=0; n<nsuffixes; n++) {
+        if (n == nsuffixes-1)
+          sprintf(stmp, ".\n");
+        sprintf(errmsg, "%s%s%s%s", errmsg, fname, suffixes[n], stmp);
+      }
+
+    } else {
+      sprintf(errmsg, "Unable to open %s\n", fname);
+    }
+    fprintf(stderr, "%s", errmsg);
+  }
+
+  return fp;
 }

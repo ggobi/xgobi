@@ -68,7 +68,7 @@ Boolean
 read_collab_to_row(char *data_in, Boolean init, xgobidata *xg)
 {
   char lab_file[128];
-  static char *suffix[] = {
+  static char *suffixes[] = {
     ".col", ".column", ".collab", ".var"
   };
   char initstr[INITSTRSIZE];
@@ -81,16 +81,10 @@ read_collab_to_row(char *data_in, Boolean init, xgobidata *xg)
   /*
    * Check if variable label file exists, and open if so.
   */
-  if (data_in != NULL && data_in != "" && strcmp(data_in,"stdin") != 0) {
-    i = 0;
-    while (found == False && i<4 ) {
-      (void) strcpy(lab_file, data_in);
-      (void) strcat(lab_file, suffix[i++]);
-      if ( (fp = fopen(lab_file,"r")) != NULL)
-        found = True;
-    }
-  }
- 
+  if (data_in != NULL && data_in != "" && strcmp(data_in,"stdin") != 0)
+    if ( (fp = open_xgobi_file(data_in, 4, suffixes, "r", true)) != NULL)
+      found = True;
+
   /*
    * Read in variable labels or initiate them to generic if no label
    * file exists
@@ -141,12 +135,25 @@ read_collab_to_row(char *data_in, Boolean init, xgobidata *xg)
   return(found);
 }
 
+/***********************************************************/
+/*********************** end scatmat ***********************/
+/***********************************************************/
+
+void
+alloc_rowlabels(xgobidata *xg) {
+  int i;
+
+  xg->rowlab = (char **) XtMalloc((Cardinal) xg->nrows * sizeof (char *));
+  for (i=0; i<xg->nrows; i++)
+    xg->rowlab[i] = (char *) XtMalloc((Cardinal) ROWLABLEN * sizeof(char));
+}
+
 Boolean
 read_rowlabels(char *data_in, Boolean init, xgobidata *xg)
 {
   int i, j, k;
   char lab_file[128];
-  static char *suffix[] = {
+  static char *suffixes[] = {
     ".row", ".rowlab", ".case"
   };
   char initstr[INITSTRSIZE];
@@ -155,9 +162,7 @@ read_rowlabels(char *data_in, Boolean init, xgobidata *xg)
   FILE *fp;
 
   if (init) {
-    xg->rowlab = (char **) XtMalloc((Cardinal) xg->nrows * sizeof (char *));
-    for (i=0; i<xg->nrows; i++)
-      xg->rowlab[i] = (char *) XtMalloc((Cardinal) ROWLABLEN * sizeof(char));
+    alloc_rowlabels(xg);
   }
 
   if (!xg->is_scatmat)
@@ -165,16 +170,8 @@ read_rowlabels(char *data_in, Boolean init, xgobidata *xg)
   /* Check if case label file exists, and open if so. */
   
     if (data_in != NULL && data_in != "" && strcmp(data_in,"stdin") != 0)
-    {
-      i = 0;
-      while (found == False && i<3 )
-      {
-        (void) strcpy(lab_file, data_in);
-        (void) strcat(lab_file, suffix[i++]);
-        if ( (fp = fopen(lab_file,"r")) != NULL)
-          found = True;
-      }
-    }
+      if ( (fp = open_xgobi_file(data_in, 3, suffixes, "r", true)) != NULL)
+        found = True;
 
   /*
    * Read in case labels or initiate them to generic if no label
@@ -244,16 +241,9 @@ read_rowlabels(char *data_in, Boolean init, xgobidata *xg)
   {
     
     if (data_in != NULL && data_in != "" && strcmp(data_in,"stdin") != 0)
-    {
-      i = 0;
-      while (found == False && i<3 )
-      {
-        (void) strcpy(lab_file, data_in);
-        (void) strcat(lab_file, suffix[i++]);
-        if ( (fp = fopen(lab_file,"r")) != NULL)
-          found = True;
-      }
-    }
+      if ( (fp = open_xgobi_file(data_in, 3, suffixes, "r", true)) != NULL)
+        found = True;
+
     /*
      * Read in case labels or initiate them to generic if no label
      * file exists
@@ -317,19 +307,9 @@ read_rowlabels(char *data_in, Boolean init, xgobidata *xg)
   return(found);
 }
 
-Boolean
-read_collabels(char *data_in, Boolean init, xgobidata *xg)
-{
-  char lab_file[128];
-  static char *suffix[] = {
-    ".col", ".column", ".collab", ".var"
-  };
-  int i, j, nvar = 0;
-  Boolean found = False;
-  FILE *fp;
-  char initstr[INITSTRSIZE];
-  char *lbl;
-  char *lbl_short;
+void
+alloc_collabels(xgobidata *xg) {
+  int j;
 
   /*
    * Use ncols here; allocate space for the brushing
@@ -354,24 +334,33 @@ read_collabels(char *data_in, Boolean init, xgobidata *xg)
     xg->collab_tform2[j] = (char *) XtMalloc(
       (Cardinal) (COLLABLEN+2*16) * sizeof(char));
   }
+}
 
+Boolean
+read_collabels(char *data_in, Boolean init, xgobidata *xg)
+{
+  char lab_file[128];
+  static char *suffixes[] = {
+    ".col", ".column", ".collab", ".var"
+  };
+  int i, j, nvar = 0;
+  Boolean found = False;
+  FILE *fp;
+  char initstr[INITSTRSIZE];
+  char *lbl;
+  char *lbl_short;
 
-  if (!xg->is_scatmat)
-  {
+  alloc_collabels(xg);
+
+  if (!xg->is_scatmat) {
 
     /*
      * Check if variable label file exists, and open if so.
     */
-    if (data_in != NULL && data_in != "" && strcmp(data_in,"stdin") != 0) {
-      i = 0;
-      while (found == False && i<4 ) {
-        (void) strcpy(lab_file, data_in);
-        (void) strcat(lab_file, suffix[i++]);
-        if ( (fp = fopen(lab_file,"r")) != NULL)
-          found = True;
-      }
-    }
-  
+    if (data_in != NULL && data_in != "" && strcmp(data_in,"stdin") != 0)
+      if ( (fp = open_xgobi_file(data_in, 4, suffixes, "r", true)) != NULL)
+        found = True;
+
     /*
      * Read in variable labels or initiate them to generic if no label
      * file exists
@@ -441,8 +430,8 @@ read_collabels(char *data_in, Boolean init, xgobidata *xg)
  * You would think I needed these lines, but they cause a
  * core dump.
  *
-      XtFree((XtPointer) lbl);
-      XtFree((XtPointer) lbl_short);
+ *    XtFree((XtPointer) lbl);
+ *    XtFree((XtPointer) lbl_short);
 */
     }
     else
@@ -483,8 +472,7 @@ read_collabels(char *data_in, Boolean init, xgobidata *xg)
 Boolean reread_dat(char *rootname, xgobidata *xg)
 {
   int i, j;
-  char *suffix = ".dat";
-  char fname[128];
+  static char *suffixes[] = {"", ".dat"};
   Boolean found = False;
   FILE *fp;
   Boolean caught_error = False;
@@ -492,17 +480,10 @@ Boolean reread_dat(char *rootname, xgobidata *xg)
   int fs;
   Boolean show_missings_warning = False;
 
-  sprintf(fname, rootname);
+  if (rootname != NULL && strcmp(rootname, "") != 0)
+    if ( (fp = open_xgobi_file(rootname, 2, suffixes, "r", false)) != NULL)
+      found = True;
 
-  if (fname != NULL) {
-    if ( (fp = fopen(fname,"r")) != NULL)
-      found = True;
-  }
-  if (!found) {
-    strcat(fname, suffix);
-    if ( (fp = fopen(fname,"r")) != NULL)
-      found = True;
-  }
   if (found) {
     i = 0;
     xg->nmissing = 0;
@@ -595,13 +576,22 @@ Boolean reread_dat(char *rootname, xgobidata *xg)
   return(found);
 }
 
+void
+init_single_vgroup(xgobidata *xg) {
+  int j;
+
+  xg->vgroup_ids = (int *) XtMalloc((Cardinal) xg->ncols * sizeof(int));
+  for (j=0; j<xg->ncols; j++)
+    xg->vgroup_ids[j] = 0;
+}
+
 Boolean
 read_vgroups(char *data_in, Boolean init, xgobidata *xg)
 /*
  * Read in the grouping numbers for joint scaling of variables
 */
 {
-  char lab_file[115], suffix[15];
+  static char *suffixes[] = {".vgroups"};
   int itmp, i, j;
   Boolean found = False;
   FILE *fp;
@@ -611,15 +601,9 @@ read_vgroups(char *data_in, Boolean init, xgobidata *xg)
     xg->vgroup_ids = (int *) XtMalloc((Cardinal) xg->ncols * sizeof(int));
   }
 
-  (void) strcpy(suffix, ".vgroups");
-
-  if (data_in != NULL && data_in != "" && strcmp(data_in, "stdin") != 0) {
-    i = 0;
-    (void) strcpy(lab_file, data_in);
-    (void) strcat(lab_file, suffix);
-    if ( (fp = fopen(lab_file,"r")) != NULL)
+  if (data_in != NULL && data_in != "" && strcmp(data_in, "stdin") != 0)
+    if ( (fp = open_xgobi_file(data_in, 1, suffixes, "r", true)) != NULL)
       found = True;
-  }
 
   if (found) {
     i = 0;
@@ -701,7 +685,7 @@ read_rgroups(char *data_in, Boolean init, xgobidata *xg)
  * Read in the grouping numbers for joint scaling of variables
 */
 {
-  char lab_file[115], suffix[15];
+  static char *suffixes[] = {".rgroups"};
   int itmp, i, j, k;
   Boolean found = False;
   Boolean found_rg;
@@ -711,15 +695,9 @@ read_rgroups(char *data_in, Boolean init, xgobidata *xg)
 
   if (!xg->is_scatmat)
   {
-    (void) strcpy(suffix, ".rgroups");
-  
     if (data_in != NULL && data_in != "" && strcmp(data_in, "stdin") != 0)
-    {
-      i = 0;
-      sprintf(lab_file, "%s%s", data_in, suffix);
-      if ( (fp = fopen(lab_file,"r")) != NULL)
+      if ( (fp = open_xgobi_file(data_in, 1, suffixes, "r", true)) != NULL)
         found = True;
-    }
   
     if (!found) {
       xg->nrgroups = 0;
@@ -918,22 +896,15 @@ xgobidata *xg)
   int gid;
   glyphv glyph;
   Boolean use_defaults = False;
+  static char *suffixes[] = {".glyphs"};
 
-  if (strcmp(data_in, "stdin") != 0) {
-
-    if (strcmp(data_in, "") == 0)
-      found = False;
-    else {
-      /*
-       * Check if glyphs file exists.
-      */
-      (void) strcpy(lab_file, data_in);
-      if (addsuffix)
-        (void) strcat(lab_file, ".glyphs");
-      if ( (fp = fopen(lab_file,"r")) != NULL)
+  if (data_in != NULL && data_in != "" && strcmp(data_in, "stdin") != 0) {
+    if (addsuffix) {
+      if ( (fp = open_xgobi_file(data_in, 1, suffixes, "r", true)) != NULL)
         found = True;
-      else
-        found = False;
+    } else {
+      if ( (fp = open_xgobi_file(data_in, 0, suffixes, "r", true)) != NULL)
+        found = True;
     }
 
     if (!found && reinit == True)
@@ -989,6 +960,7 @@ xgobidata *xg)
                 break;
               }
               (void) find_glyph_type_and_size(gid, &glyph);
+
 
             /*
              * Else if the input is a string and a number
@@ -1110,13 +1082,13 @@ read_point_colors(char *data_in, Boolean addsuffix, Boolean reinit,
 xgobidata *xg)
 {
   Boolean ok = True;
-  char lab_file[128];
   int i, j, k, ncases;
   Boolean found;
   Colormap cmap = DefaultColormap(display, DefaultScreen(display));
   XColor exact;
   char color_name[32];
   FILE *fp;
+  char *suffixes[] = {".colors"};
 
   if (!strcmp(data_in, ""))
     return(False);
@@ -1127,14 +1099,8 @@ xgobidata *xg)
       /*
        * If color, check if colors file exists.
       */
-
-      (void) strcpy(lab_file, data_in);
-      if (addsuffix)
-        (void) strcat(lab_file, ".colors");
-      if ( (fp = fopen(lab_file,"r")) != NULL)
-        found = 1;
-      else
-        found = 0;
+      if ( (fp = open_xgobi_file(data_in, 1, suffixes, "r", true)) != NULL)
+        found = True;
 
       if (!found && reinit == True)
         init_color_ids(xg);
@@ -1193,8 +1159,6 @@ xgobidata *xg)
                   }
                   else
                   {
-                    fprintf(stderr, "Error in reading %s; using defaults.\n",
-                      lab_file);
                     init_color_ids(xg);
                     break;
                   }
@@ -1293,8 +1257,6 @@ xgobidata *xg)
                 }
                 else
                 {
-                  fprintf(stderr, "Error in reading %s; using defaults.\n",
-                    lab_file);
                   init_color_ids(xg);
                   break;
                 }
@@ -1389,33 +1351,20 @@ read_erase(char *data_in, Boolean reinit, xgobidata *xg)
  * Read in the erase vector
 */
 {
-  char lab_file[115];
   int itmp, i, j, k, found = False;
   FILE *fp;
+  char *suffixes[] = {".erase"};
 
-  if (data_in != NULL && strcmp(data_in, "stdin") != 0) {
-
-    if (strcmp(data_in, "") == 0)
-      found = False;
-    else {
-      /*
-       * Check whether erase file exists.
-      */
-
-      (void) strcpy(lab_file, data_in);
-      (void) strcat(lab_file, ".erase");
-      if ( (fp = fopen(lab_file,"r")) != NULL)
-        found = True;
-    }
-  }
-
+printf("(read_erase) nrows %d\n", xg->nrows);
   xg->erased = (unsigned short *) XtRealloc((char *) xg->erased,
     (Cardinal) xg->nrows * sizeof(unsigned short));
 
-  if (found)
-  {
-    if (!xg->is_scatmat)
-    {
+  if (data_in != NULL && strcmp(data_in, "stdin") != 0)
+    if ( (fp = open_xgobi_file(data_in, 1, suffixes, "r", true)) != NULL)
+      found = True;
+
+  if (found) {
+    if (!xg->is_scatmat) {
       int k = 0;  /* k is the file row, used if file_read_type != read_all */
       i = 0;
       while ((fscanf(fp, "%d", &itmp) != EOF) && (i < xg->nrows)) {
@@ -1427,7 +1376,7 @@ read_erase(char *data_in, Boolean reinit, xgobidata *xg)
       }
   
       if (i < xg->nrows) {
-        (void) fprintf(stderr, "Problem in reading file %s; \n", lab_file);
+        (void) fprintf(stderr, "Problem in reading erase file; \n");
         (void) fprintf(stderr, "not enough rows\n");
       }
     }
@@ -1439,7 +1388,7 @@ read_erase(char *data_in, Boolean reinit, xgobidata *xg)
     
       if (i < xg->sm_nrows)
       {
-        (void) fprintf(stderr, "Problem in reading file %s; \n", lab_file);
+        (void) fprintf(stderr, "Problem in reading erase file; \n");
         (void) fprintf(stderr, "not enough rows\n");
       }
 
@@ -1468,28 +1417,21 @@ read_connecting_lines(char *rootname, Boolean startup, xgobidata *xg)
   /* startup - Initializing xgobi? */
 {
   int fs, nblocks, bsize = 500;
-  Boolean ok = True;
+  Boolean ok = True, found = False;
   int jlinks = 0;
   FILE *fp;
-  char *fname;
+  static char *suffixes[] = {".lines"};
 
   if ((rootname == NULL) || (strcmp(rootname, "") == 0) || 
-      strcmp(rootname, "stdin") == 0) {
+      strcmp(rootname, "stdin") == 0)
+  {
     create_default_lines(xg);
     return(ok);
-  } else {
-    fname = XtMalloc(128 * sizeof(char));
-    /* This is for the in-process case */
-    if (rootname == (char *) NULL)
-      strcpy(fname, xg->datafilename);
-    /* This is for the startup case */
-    else
-      strcpy(fname, rootname);
-    strcat(fname, ".lines");
-  }
+  } else
+    if ( (fp = open_xgobi_file(rootname, 1, suffixes, "r", true)) != NULL)
+      found = True;
 
-  if ((fp = fopen(fname, "r")) != NULL)
-  {
+  if (found) {
     int a, b;
 
     xg->nlines = 0;
@@ -1550,11 +1492,7 @@ read_connecting_lines(char *rootname, Boolean startup, xgobidata *xg)
     if (fclose(fp) == EOF)
       fprintf(stderr, "Error in closing .lines file");
   }
-  else /* Create defaults */
-    create_default_lines(xg);
 
-  if (fname != (char *) NULL)
-    XtFree((char *) fname);
   return(ok);
 }
 
@@ -1564,39 +1502,23 @@ xgobidata *xg)
   /* startup --  Initializing xgobi? */
 {
   int i;
-  Boolean ok = True;
+  Boolean found = false, ok = true;
   char *fname;
   char color_name[32];
   FILE *fp;
   Colormap cmap = DefaultColormap(display, DefaultScreen(display));
   XColor exact;
-  char message[512];
-
-  fname = XtMalloc(128 * sizeof(char));
-  /* This is for the in-process case */
-  if (rootname == (char *) NULL || rootname == "")
-    strcpy(fname, xg->datafilename);
-  /* This is for the startup case */
-  else if (strcmp(rootname, "stdin") != 0)
-    strcpy(fname, rootname);
-  if (addsuffix)
-    strcat(fname, ".linecolors");
+  char *suffixes[] = {".linecolors"};
 
   if (!mono) {
     /*
      * Check if line colors file exists.
     */
-    if ( (fp = fopen(fname, "r")) == NULL)
-    {
-      if (!startup) {
-        sprintf(message,
-          "The file '%s' can't be opened for reading\n", fname);
-        show_message(message, xg);
-      }
-      ok = False;
+    if ( (fp = open_xgobi_file(rootname, 1, suffixes, "r", true)) != NULL)
+      found = True;
     }
-    else   /*  if (fp != NULL) */
-    {
+
+    if (found) {
       /*
        * Keep track of the color names read in;
        * assume that there aren't going to be more than 64 colors
@@ -1650,9 +1572,7 @@ xgobidata *xg)
         }
       }
       fclose(fp);
-    }
   }
-  XtFree(fname);
   return(ok);
 }
 
@@ -2007,24 +1927,14 @@ read_nlinkable(char *data_in, Boolean init, xgobidata *xg)
  * Read in the number of rows to be linked.
 */
 {
-  char lab_file[115], suffix[15];
   int itmp;
   Boolean found = False;
   FILE *fp;
-
-  (void) strcpy(suffix,".nlinkable");
+  char *suffixes[] = {".nlinkable"};
 
   if (!xg->is_scatmat) {
-
-    if ((data_in != NULL) &&
-        (strcmp(data_in, "") != 0) &&
-        (strcmp(data_in, "stdin") != 0))
-    {
-      (void) strcpy(lab_file, data_in);
-      (void) strcat(lab_file, suffix);
-      if ( (fp = fopen(lab_file,"r")) != NULL)
-        found = True;
-    }
+    if ( (fp = open_xgobi_file(data_in, 1, suffixes, "r", true)) != NULL)
+      found = True;
 
     /*
      * Initialize nlinkable to be all the rows; if not
@@ -2068,11 +1978,11 @@ read_jitter_values(char *data_in, Boolean reinit, xgobidata *xg)
  * Read in a .jit file of jittered values, nrows by ncols
 */
 {
-  char lab_file[115], suffix[15];
   long ltmp;
   int i, j;
   Boolean found = False;
   FILE *fp;
+  char *suffixes[] = {".jit"};
 
   /* XtCalloc initializes to zero */
   xg->jitter_data = (long **) XtRealloc((XtPointer)
@@ -2080,16 +1990,9 @@ read_jitter_values(char *data_in, Boolean reinit, xgobidata *xg)
   for (i=0; i<xg->nrows; i++)
     xg->jitter_data[i] = (long *) XtCalloc(xg->ncols, sizeof(long));
 
-  (void) strcpy(suffix, ".jit");
-
   if (data_in != NULL && data_in != "" && strcmp(data_in, "stdin") != 0)
-  {
-    i = 0;
-    (void) strcpy(lab_file, data_in);
-    (void) strcat(lab_file, suffix);
-    if ( (fp = fopen(lab_file,"r")) != NULL)
+    if ( (fp = open_xgobi_file(data_in, 1, suffixes, "r", true)) != NULL)
       found = True;
-  }
 
   if (found)
   {
@@ -2109,7 +2012,7 @@ read_jitter_values(char *data_in, Boolean reinit, xgobidata *xg)
 
     if (i < xg->nrows)
     {
-      (void) fprintf(stderr, "Problem in reading file %s; \n", lab_file);
+      (void) fprintf(stderr, "Problem in reading jittered values;\n");
       (void) fprintf(stderr, "not enough rows\n");
     }
   }

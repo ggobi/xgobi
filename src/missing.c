@@ -128,14 +128,14 @@ read_missing_values(xgobidata *xg)
 {
   int i, j, ok, itmp, row, col;
   int nmissing = 0;
-  char fname[256];
   FILE *fp;
+  static char *suffixes[] = {".missing"};
 
   if (xg->file_read_type != read_all)
     return;
 
-  sprintf(fname, "%s.missing", xg->datafname);
-  if ((fp = fopen(fname, "r")) != NULL) {
+  if ( (fp = open_xgobi_file(xg->datafname, 1, suffixes, "r", true)) != NULL)
+  {
 
     init_missing_array(xg->nrows, xg->ncols, xg);
 
@@ -224,6 +224,7 @@ read_imputation_data(xgobidata *xg)
   float row1[MAX_NIMPUTATIONS];
   FILE *fp;
   static Boolean initd = False;
+  static char *suffixes[] = {".imp"};
 
   if (!initd) {
 
@@ -231,7 +232,7 @@ read_imputation_data(xgobidata *xg)
 
     sprintf(fname, "%s.imp", xg->datafname);
 
-    if ( (fp = fopen(fname,"r")) != NULL) 
+    if ( (fp = open_xgobi_file(xg->datafname, 1, suffixes, "r", false)) != NULL)
     {
       /* Read in the first row to get the number of imputations */
 

@@ -1,3 +1,4 @@
+/* rpc_xpl.c */
 /************************************************************
  *                                                          *
  *  Permission is hereby granted  to  any  individual   or  *
@@ -46,7 +47,7 @@ void startxplore (xgobidata *xg)
 
   rpc_server_main (xg_server_number, (u_long) 1);
   
-  sprintf (command, "$XPL4PROG/xplore -startup $XPL4LIB/xgobistartup.xpl -server %x -client %x -link xgobi &",
+  sprintf (command, "$XPL4HOME/xplore -ini $XPL4HOME/XploRe.ini -startup $XPL4LIB/xgobistartup.xpl -server %x -client %x -link xgobi &",
     xpl_server_number, xg_server_number); 
   system (command);
 
@@ -66,6 +67,8 @@ void startxplore (xgobidata *xg)
     sprintf (message, "XGobi: Cannot start XploRe.\n");
     show_message(message, (xgobidata *) &xgobi);
   }
+  
+  rpc_xplore_pass_info ((xgobidata *) &xgobi);
 }
 
 
@@ -179,6 +182,7 @@ int rpc_xplore_smoother (char *smoother, int choice,
   char *DataStr;
   char *RequStr;
   char *RetStr;
+  char tempRetStr[1024];
   extern int server_id;
   extern int status;
 
@@ -226,8 +230,9 @@ int rpc_xplore_smoother (char *smoother, int choice,
   }
 
   sprintf(RequStr, "XGobiSmooth");
+  sprintf(RetStr, "");
   
-  status = airequest (xpl_server_id, 3, RequStr, RetStr, time);
+  status = airequest (xpl_server_id, 3, RequStr, tempRetStr, time);
   if (status != 0) 
   {
     sprintf (message, "XGobi: Error in submitting XploRe smooth request #2 - %d\n", status);
@@ -237,6 +242,25 @@ int rpc_xplore_smoother (char *smoother, int choice,
     XtFree ((XtPointer) RetStr);
     return(1);
   }
+
+  while (strlen(tempRetStr) == 1023)
+  {
+    strcat(RetStr, tempRetStr);
+    
+    status = airequest (xpl_server_id, 3, RequStr, tempRetStr, time);
+    if (status != 0) 
+    {
+      sprintf (message, "XGobi: Error in submitting XploRe smooth request #3 - %d\n", status);
+      show_message(message, (xgobidata *) &xgobi);
+      XtFree ((XtPointer) DataStr);
+      XtFree ((XtPointer) RequStr);
+      XtFree ((XtPointer) RetStr);
+      return(1);
+    }
+  }
+  
+  strcat(RetStr, tempRetStr);
+  
     
   i = 1;
   tok   = strtok (RetStr, " \t\n");  
@@ -247,6 +271,61 @@ int rpc_xplore_smoother (char *smoother, int choice,
     i++;
   }
   
+  XtFree ((XtPointer) DataStr);
+  XtFree ((XtPointer) RequStr);
+  XtFree ((XtPointer) RetStr);
+  return(0);
+}  
+
+
+int rpc_xplore_pass_info (xgobidata *xg)
+
+{ 
+  char *DataStr;
+  char *RequStr;
+  char *RetStr;
+  extern int status;
+
+  double time = TIMEOUT;
+
+
+  DataStr = (char *) XtMalloc ((Cardinal) 512);
+  RequStr = (char *) XtMalloc ((Cardinal) 512);
+  RetStr = (char *) XtMalloc ((Cardinal) 512);
+
+  sprintf (DataStr, "xg1=0"); /* create output string (xg1) */
+  sprintf (RetStr, " ");
+    
+  sprintf (RequStr, "%x %s", xg_server_number, DataStr);
+
+  status = airequest (xpl_server_id, 1, RequStr, RetStr, time);
+  if (status != 0) 
+  {
+    sprintf (message, "XGobi: Error in submitting XploRe (pass info) request #1 - %d\n", status);
+    show_message(message, (xgobidata *) &xgobi);
+    XtFree ((XtPointer) DataStr);
+    XtFree ((XtPointer) RequStr);
+    XtFree ((XtPointer) RetStr);
+    return(1);
+  }
+
+
+  sprintf (DataStr, "clientport1=\"0x%x\"", xg_server_number); /* create output string (clientport1) */
+  sprintf (RetStr, " ");
+    
+  sprintf (RequStr, "%x %s", xg_server_number, DataStr);
+
+  status = airequest (xpl_server_id, 1, RequStr, RetStr, time);
+  if (status != 0) 
+  {
+    sprintf (message, "XGobi: Error in submitting XploRe (pass info) request #1 - %d\n", status);
+    show_message(message, (xgobidata *) &xgobi);
+    XtFree ((XtPointer) DataStr);
+    XtFree ((XtPointer) RequStr);
+    XtFree ((XtPointer) RetStr);
+    return(1);
+  }
+
   XtFree ((XtPointer) DataStr);
   XtFree ((XtPointer) RequStr);
   XtFree ((XtPointer) RetStr);
@@ -594,3 +673,4 @@ pass_projection_xplore_cback(Widget w, xgobidata *xg, XtPointer callback_data)
 #endif
 
 }
+
