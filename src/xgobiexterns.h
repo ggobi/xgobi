@@ -459,6 +459,7 @@ extern void set_showlines_option(Boolean, xgobidata *);
 extern XtEventHandler set_sticky(Widget, xgobidata *, XEvent *);
 extern void set_title_and_icon(char *, xgobidata *);
 extern void set_sph_labs(xgobidata *xg, int);
+extern void restore_sph_labs(xgobidata *xg);
 extern void set_sph_tform_tp(xgobidata *);
 extern XtCallbackProc set_tour_cont_fact_cback(Widget, xgobidata *, XtPointer);/* interactive gt*/
 extern XtCallbackProc set_tour_link_state_cback(Widget, xgobidata *, XtPointer);

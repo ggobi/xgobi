@@ -812,7 +812,7 @@ scale_array_mean(struct array *arrp, int nr, int nc)
 {
   extern double delta;  /* in mds.c */
   double mean, dsum = 0.0;
-  double max, min;
+  double max, min, scl;
   int i, j;
 
   if (arrp->nrows < nr || arrp->ncols < nc)
@@ -826,17 +826,18 @@ scale_array_mean(struct array *arrp, int nr, int nc)
       for (i=0; i<nr; i++) arrp->data[i][j] -= mean;
     }
 
-    max = min = arrp->data[0][0] ;
+    max = -1000000; min = 1000000;
     for (j=0; j<nc; j++)
-      for (i=0; i<nr; i++){
+      for (i=0; i<nr; i++) {
         if (arrp->data[i][j] < min) min = arrp->data[i][j];
         if (arrp->data[i][j] > max) max = arrp->data[i][j];
       }
     if((max-min)<1E-5) 
       printf("scale_array_mean: max-min too small = %e",max-min);
+    if(max > -min) scl = max; else scl = -min;
     for (j=0; j<nc; j++)
       for (i=0; i<nr; i++) 
-        arrp->data[i][j] = (arrp->data[i][j] - min)/(max - min)*2 - 1.0;
+        arrp->data[i][j] = arrp->data[i][j]/scl;
 
   }
 }

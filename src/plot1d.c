@@ -534,8 +534,10 @@ plot1d_on(xgobidata *xg)
 
     if (!xg->is_plotting1d) {
       if (xg->is_touring && xg->is_princ_comp) {
+	set_sph_labs(xg, xg->nsph_vars);
         xg->is_touring = False;
-        reset_var_labels(xg, PRINCCOMP_OFF);
+/*        reset_var_labels(xg, PRINCCOMP_OFF);i think not needed anymore
+                                             sphering transformation*/
       }
 
       if (xg->carry_vars)

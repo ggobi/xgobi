@@ -132,8 +132,9 @@ do_sph_cback(Widget w, xgobidata *xg, XtPointer callback_data)
        
       spherize_data(xg, numpcs, xg->nsph_vars, xg->sph_vars);
 
-      for (j=0; j<numpcs; j++)
+/*      for (j=0; j<numpcs; j++)
         recalc_vc(j, xg);
+*/
 
       set_sph_labs(xg, numpcs);
 
@@ -371,6 +372,7 @@ open_sphere_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
   }
 
   /* Now calculate the svd and display results */
+  restore_sph_labs(xg);
   get_sph_vars(xg);
   printf("num vars to be sph'd = %d: ",xg->nsph_vars);
   for (j=0; j<xg->nsph_vars; j++)
@@ -378,8 +380,7 @@ open_sphere_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
   printf("\n");
   set_sph_tform_tp(xg);
 
-  compute_vc_matrix(xg);
-  
+  compute_vc_matrix(xg); 
    /* If xg->nsph_vars > 1 use svd routine, otherwise just standardize */
   if (xg->nsph_vars > 1) {
     do_svd = update_vc_active_and_do_svd(xg, xg->nsph_vars, xg->sph_vars);
@@ -392,10 +393,12 @@ open_sphere_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
       get_evals(xg->nsph_vars, evals);
       for (j=0; j<xg->nsph_vars; j++)
       {
-         evals[j] = sqrt((double)evals[j]);
+         /*evals[j] = sqrt((double)evals[j]);*/  /*on di's authority*/
          printf("%f ",evals[j]);
       }
       printf("\n");
+      XFillRectangle(display, scree_plot_pixmap, clear_GC,
+        0, 0, scree_wksp.width, scree_wksp.height);
       XDrawLine(display, scree_plot_pixmap, copy_GC, 10, 90, 190, 90);
       XDrawLine(display, scree_plot_pixmap, copy_GC, 10, 90, 10, 10);
       for (j=0; j<xg->nsph_vars; j++) {
@@ -412,8 +415,8 @@ open_sphere_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
       }
       XCopyArea(display, scree_plot_pixmap, scree_plot_window, copy_GC,
         0, 0, scree_wksp.width, scree_wksp.height, 0, 0);
-      XFillRectangle(display, scree_plot_pixmap, clear_GC,
-                     0, 0, scree_wksp.width, scree_wksp.height);
+/*      XFillRectangle(display, scree_plot_pixmap, clear_GC,
+                     0, 0, scree_wksp.width, scree_wksp.height);*/
     }
     
   } else {

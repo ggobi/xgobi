@@ -1962,6 +1962,7 @@ draw_tour_axes(xgobidata *xg)
     }
     else if (xg->is_pc_axes)
     {
+      set_sph_labs(xg, xg->nsph_vars);
       for (j=0; j<xg->ncols_used; j++)
       {
         if ((xg->u[0][j]*xg->u[0][j] + xg->u[1][j]*xg->u[1][j]) > tol)
@@ -2145,8 +2146,8 @@ set_tourvar(xgobidata *xg, int varno)
           world_to_plane(xg);
           plane_to_screen(xg);
           plot_once(xg);
-          reset_var_labels(xg, !xg->is_princ_comp);
-          reset_one_label(xg, varno, 1);
+/*          reset_var_labels(xg, !xg->is_princ_comp);
+          reset_one_label(xg, varno, 1);*//* bug fix: sphering transformation */
           tour_var_lines(xg);
           xg->new_direction_flag = True;
         }

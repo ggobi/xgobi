@@ -337,10 +337,6 @@ brush_motion(Widget w, xgobidata *xg, XEvent *evnt, Boolean *cont)
     }
 
     if (button2down) {
-      /*
-       * Reshape brush.  Keep x1 < x2 and y1 < y2 so that the
-       * painting code can be simple.
-      */
       brush_pos.x2 = xmotion->x ;
       brush_pos.y2 = xmotion->y ;
     }
@@ -478,17 +474,6 @@ brush_button(Widget w, xgobidata *xg, XEvent *evnt)
         else if (xbutton->button == 2)
           button2down = 0;
  
-        /*
-         * Make this an option?  I certainly prefer it.
-         * Option: reset corner that the cursor is attached
-         * to to the lower right.  dfs, thinking
-         * Maybe marking the corner will be sufficient.
-          brush_pos.x1 = x1;
-          brush_pos.x2 = x2;
-          brush_pos.y1 = y1;
-          brush_pos.y2 = y2;
-        */
-
         /*
          * We're redrawing everything on buttonrelease; we have no
          * way of knowing at this point whether things changed or

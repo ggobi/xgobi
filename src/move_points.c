@@ -74,19 +74,13 @@ mp_button(Widget w, xgobidata *xg, XEvent *evnt, Boolean *cont)
 }
 
 void
-move_pt_pipeline(int id, xgobidata *xg)
+move_pt_pipeline(int id, lcoords *eps, xgobidata *xg)
 {
-  extern void screen_to_plane(xgobidata *, int, lcoords *, Boolean, Boolean);
   extern void plane_to_world(xgobidata *, int, lcoords *);
   extern void world_to_raw(xgobidata *, int);
 
-  /* run the pipeline backwards */
-
-  screen_to_plane(xg, id, &eps,
-    (mpdir_type == horiz || mpdir_type == both),
-    (mpdir_type == vert || mpdir_type == both));
-
-  plane_to_world(xg, id, &eps);
+  /* run the earliest parts of the pipeline backwards */
+  plane_to_world(xg, id, eps);
   world_to_raw(xg, id);
 }
 
@@ -100,11 +94,14 @@ move_pt(int id, int x, int y, xgobidata *xg) {
     xg->screen[id].y = y;
 
   /* Move the selected point */
-  move_pt_pipeline(id, xg);
+  screen_to_plane(xg, id, &eps,
+    (mpdir_type == horiz || mpdir_type == both),
+    (mpdir_type == vert || mpdir_type == both));
+  move_pt_pipeline(id, &eps, xg);  /*-- eps won't be changed here --*/
 
   if (use_brush_groups) {
     if (xg->nclust > 1) {
-      float cur_clust = xg->raw_data[id][xg->ncols_used-1];
+      int cur_clust = (int) xg->raw_data[id][xg->ncols_used-1];
 
       /*
        * Move all points which belong to the same cluster
@@ -115,13 +112,16 @@ move_pt(int id, int x, int y, xgobidata *xg) {
         if (k == id)
           ;
         else {
-          if (xg->raw_data[k][xg->ncols_used-1] == cur_clust) {
+          if ((int)xg->raw_data[k][xg->ncols_used-1] == cur_clust) {
             if (!xg->erased[k]) {   /* ignore erased values altogether */
-              if (mpdir_type == horiz || mpdir_type == both)
+
+              if (mpdir_type == horiz || mpdir_type == both) {
                 xg->planar[k].x += eps.x;
-              if (mpdir_type == vert || mpdir_type == both)
+              }
+              if (mpdir_type == vert || mpdir_type == both) {
                 xg->planar[k].y += eps.y;
-              move_pt_pipeline(k, xg);
+              }
+              move_pt_pipeline(k, &eps, xg);
             }
           }
         }

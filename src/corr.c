@@ -3056,7 +3056,9 @@ corr_tour_on(xgobidata *xg)
       if (xg->is_plotting1d)
         free_txtr_var();
       else if (xg->is_touring && xg->is_princ_comp)
-        reset_var_labels(xg, PRINCCOMP_OFF);
+	set_sph_labs(xg, xg->nsph_vars);
+/*        reset_var_labels(xg, PRINCCOMP_OFF);i think not needed anymore
+                                             sphering transformation*/
 
       if (xg->carry_vars)
         carry_corr_vars(xg);

@@ -158,6 +158,26 @@ static float pp_index_min = 0.;
 /* return to basis variables */
 int got_new_basis;
 
+/* for sphering */
+typedef struct {  /*-- used for obtaining ranks --*/
+  float f;
+  int indx;
+} paird;
+
+int
+pcompare (const void *val1, const void *val2)
+{
+  const paird *pair1 = (const paird *) val1;
+  const paird *pair2 = (const paird *) val2;
+
+  if (pair1->f < pair2->f)
+    return (-1);
+  else if (pair1->f == pair2->f)
+    return (0);
+  else
+    return (1);
+}
+
 void
 init_tour_pp_GCs(xgobidata *xg)
 {
@@ -409,10 +429,10 @@ proj_scale_bitmap_pts(xgobidata *xg, int indx, int npts, int *pts_pos)
     for (j=0; j<n; j++)
     {
       tv2[0][j] = (long) ((float)tv2[0][j] *
-        (((float)bitmap_size * 0.4 * xg->tour_scale.x * (float)FUDGE_FACTOR) /
+        (((float)bitmap_size * 0.4 * xg->scale.x * (float)FUDGE_FACTOR) /
         (float)PRECISION1) + bitmap_size * 0.5 );
       tv2[1][j] = (long) ((float)tv2[1][j] *
-        (((float)bitmap_size * 0.4 * xg->tour_scale.y * (float)FUDGE_FACTOR) /
+        (((float)bitmap_size * 0.4 * xg->scale.y * (float)FUDGE_FACTOR) /
         (float)PRECISION1) + bitmap_size * 0.5 );
     }
   }
@@ -421,10 +441,10 @@ proj_scale_bitmap_pts(xgobidata *xg, int indx, int npts, int *pts_pos)
     for (j=0; j<n; j++)
     {
       tv2[0][j] = (long) ((float)tv2[0][j] *
-        (((float)bitmap_size * 0.4 * xg->tour_scale.x * (float)FUDGE_FACTOR) /
+        (((float)bitmap_size * 0.4 * xg->scale.x * (float)FUDGE_FACTOR) /
         (float)PRECISION1) + bitmap_size * 0.5 );
       tv2[1][j] = (long) ((float)tv2[1][j] *
-        (((float)bitmap_size * 0.4 * xg->tour_scale.y * (float)FUDGE_FACTOR) /
+        (((float)bitmap_size * 0.4 * xg->scale.y * (float)FUDGE_FACTOR) /
         (float)PRECISION1) + bitmap_size * 0.5 );
     }
   }
@@ -1080,6 +1100,7 @@ pc_axes_cback(Widget w, xgobidata *xg, XtPointer callback_data)
 {
   xg->is_pc_axes = !xg->is_pc_axes;
   setToggleBitmap(w, xg->is_pc_axes);
+  set_sph_labs(xg, xg->nsph_vars);
 
   plot_once(xg);
 }
@@ -3448,13 +3469,14 @@ spherize_data(xgobidata *xg, int num_pcs, int nsvars, int *svars)
 printf("in spherize\n");
   
 /* spherize data */
-  for (i=0; i<num_pcs; i++)
+/*  for (i=0; i<num_pcs; i++)
   {
     a[i] = sqrt((double) eigenval[i]);
     printf("%f ",a[i]);
   }
   printf("\n");
-  
+  */
+
   for (m=0; m<xg->nrows_in_plot; m++)
   {
     i = xg->rows_in_plot[m];
@@ -3469,7 +3491,7 @@ printf("in spherize\n");
              (xg->tform1[i][svars[k]] -
                mean[svars[k]]);
       }
-      tmpf /= (a[j]);
+      tmpf /= (eigenval[j]);
       b[0][j] = tmpf;
     }
     for (j=0; j<num_pcs; j++)
@@ -3487,13 +3509,15 @@ compute_vc_matrix(xgobidata *xg)
       the decoration points. */
   int n = xg->nlinkable_in_plot, p = xg->ncols_used; 
 
+  /* bug fix, for sphering transformation: 
+     this routine needs to use tform1 not tform2 */
 /* calculate mean vector */
   for (i=0; i<p; i++)
   {
     tmpf = 0.;
     for (j=0; j<n; j++)
     {
-      tmpf += xg->tform2[xg->rows_in_plot[j]][i];
+      tmpf += xg->tform1[xg->rows_in_plot[j]][i];
     }
     tmpf /= n;
     mean[i] = tmpf;
@@ -3507,8 +3531,8 @@ compute_vc_matrix(xgobidata *xg)
       for (k=0; k<n; k++)
       {
         tmpf = tmpf +
-             (xg->tform2[xg->rows_in_plot[k]][i] - mean[i]) *
-             (xg->tform2[xg->rows_in_plot[k]][j] - mean[j]);
+             (xg->tform1[xg->rows_in_plot[k]][i] - mean[i]) *
+             (xg->tform1[xg->rows_in_plot[k]][j] - mean[j]);
       }
       tmpf /= (n-1);
       vc[i][j] = tmpf;
@@ -3564,16 +3588,18 @@ recalc_vc(int var, xgobidata *xg)
   float tmpf = 0.;
   int n = xg->nlinkable_in_plot; /* 11/23/99 should only use actual data */
 
+  /* bug fix, for sphering transformation: 
+     this routine needs to use tform1 not tform2 */
   for (i=0; i<n; i++)
-    tmpf += xg->tform2[xg->rows_in_plot[i]][var];
+    tmpf += xg->tform1[xg->rows_in_plot[i]][var];
   mean[var] = tmpf / ((float)n);
 
   tmpf = 0.;
   for (i=0; i<xg->ncols_used; i++) {
     for (j=0; j<n; j++) {
       tmpf = tmpf +
-        (xg->tform2[xg->rows_in_plot[j]][var] - mean[var]) *
-        (xg->tform2[xg->rows_in_plot[j]][i] - mean[i]);
+        (xg->tform1[xg->rows_in_plot[j]][var] - mean[var]) *
+        (xg->tform1[xg->rows_in_plot[j]][i] - mean[i]);
     }
     tmpf /= ((float)(n - 1));
     vc[var][i] = tmpf;
@@ -3625,9 +3651,12 @@ get_evals(int nevals, float *evals)
 int
 update_vc_active_and_do_svd(xgobidata *xg, int nsvars, int *svars)
 {
-  int i, j;
+  int i, j, k;
   int vc_equals_I;
   char message[5*MSGLENGTH], str[100];
+  paird *pairs;
+  int rank;
+  float *e;
 
   for (i=0; i<nsvars; i++)
     for (j=0; j<nsvars; j++)
@@ -3641,13 +3670,44 @@ update_vc_active_and_do_svd(xgobidata *xg, int nsvars, int *svars)
     dsvd(vc_active, nsvars, nsvars, a, b);
     for (i=0; i<nsvars; i++)
     {
-      eigenval[i] = a[i];
+      /*      eigenval[i] = a[i];*/
+      eigenval[i] = sqrt((double) a[i]);
+      printf("%f ",a[i]);
 /*      if (eigenval[i] == 0 || eigenval[0]/eigenval[i] > 10000)
       {
         singular_vc = True;
       }*/
     }
+
+    pairs = (paird *) XtMalloc (nsvars * sizeof (paird));
+    e = (float *) XtMalloc (nsvars * sizeof (float));
+
+    for (i=0; i<nsvars; i++) {
+      pairs[i].f = (float) eigenval[i]; 
+      pairs[i].indx = i;
+    }
+    qsort ((char *) pairs, nsvars, sizeof (paird), pcompare);
+
+    /*-- sort the eigenvalues and eigenvectors into temporary arrays --*/
+    for (i=0; i<nsvars; i++) {
+      k = (nsvars - i) - 1;  /*-- to reverse the order --*/
+      rank = pairs[i].indx;
+      e[k] = eigenval[rank];
+      for (j=0; j<nsvars; j++) {
+        b[j][k] = vc_active[j][rank];/*-- note that this is reverse indexing
+                                        compared to ggobi --*/
+      }
+      printf("%d ",rank);
+    }
+    /*-- copy the sorted eigenvalues and eigenvectors back --*/
+    for (i=0; i<nsvars; i++) {
+      eigenval[i] = e[i];
+      for (j=0; j<nsvars; j++)
+        vc_active[j][i] = b[j][i];
+    }
     
+    XtFree((XtPointer) pairs);
+    XtFree((XtPointer) e);
 /*    if (singular_vc)
     {
       vc_equals_I = 1;
@@ -3693,7 +3753,7 @@ invert_proj_coords(xgobidata *xg)
         xg->tv[i][j] = xg->u[i][j];
   
     for (i=0; i<xg->numvars_t; i++) {
-      a[i] = sqrt((double) eigenval[i]);
+      a[i] = eigenval[i];
       for (j=0; j<2; j++)
         xg->tv[j][xg->tour_vars[i]] *= a[i];
     }

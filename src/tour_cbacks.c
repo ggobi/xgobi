@@ -1186,11 +1186,11 @@ grand_tour_on(xgobidata *xg)
        * the mode state variables have been reset; that is,
        * xg->is_touring = 1.
       */
-      if (xg->is_princ_comp)
+/*      if (xg->is_princ_comp)
       {
         update_lims(xg);
         reset_var_labels(xg, PRINCCOMP_ON);
-      }
+      }*//* bug fix: sphering transformation */
 
       /*
        * xgobi only needs this line if xg->is_princ_comp,

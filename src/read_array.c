@@ -116,10 +116,6 @@ read_binary(FILE *fp, xgobidata *xg)
   else
     xg->nrows = xg->file_sample_size;
 
-  /* May 1999: Di and I are commenting this out to fix a
-   * problem that it causes in the scatmat code. */
-  /* xg->nrows_in_plot = xg->nrows; */
-
   xg->file_rows_sampled = (long *)
     XtMalloc((Cardinal) xg->nrows * sizeof(long));
 

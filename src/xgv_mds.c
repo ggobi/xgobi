@@ -37,7 +37,7 @@ extern void add_stress_value(double);
 extern void make_empty_array(struct array *, int, int);
 extern void draw_stress(void);
 extern void zero_array(struct array *);
-extern void scale_array_mean(struct array *, int, int);
+extern void scale_array_mean(struct array *, int, int, xgobidata);
 extern void update_shepard_labels(int);
 
 /* Macros. */
@@ -52,6 +52,43 @@ extern void update_shepard_labels(int);
 ( xgobi.color_now[(i)] == xgobi.color_id && \
   xgobi.glyph_now[(i)].type == xgobi.glyph_id.type && \
   xgobi.glyph_now[(i)].size == xgobi.glyph_id.size ) \
+
+
+void
+scale_array_meanx(struct array *arrp, int nr, int nc, int mp)
+{
+  extern double delta;  /* in mds.c */
+  double mean, dsum = 0.0;
+  double max, min, scl;
+  int i, j, ni;
+
+  if (arrp->nrows < nr || arrp->ncols < nc)
+    fprintf(stderr, "This array is smaller than nr or nc\n");
+  else {
+
+    for (j=0; j<nc; j++) {
+      dsum = 0.0; ni = 0;
+      for (i=0; i<nr; i++) { dsum += arrp->data[i][j]; ni++; }
+      mean = dsum / ni;
+      for (i=0; i<nr; i++) arrp->data[i][j] -= mean;
+    }
+
+    max = -1000000; min = 1000000;
+    for (j=0; j<nc; j++)
+      for (i=0; i<nr; i++){
+        if (arrp->data[i][j] < min) min = arrp->data[i][j];
+        if (arrp->data[i][j] > max) max = arrp->data[i][j];
+      }
+    if((max-min)<1E-5) 
+      printf("scale_array_mean: max-min too small = %e",max-min);
+    if(max > -min) scl = max; else scl = -min;
+    for (j=0; j<nc; j++)
+      for (i=0; i<nr; i++) 
+        arrp->data[i][j] = arrp->data[i][j]/scl;
+
+  }
+}
+
 
 /*
 static Boolean
@@ -126,6 +163,7 @@ mds_once(Boolean doit, Boolean shepard, FILE* fpdat, FILE* fprow)
   xgobidata *xg = (xgobidata *) &xgobi;
 
   extern int moving_point;
+  int mp;
   Boolean keep_going;
 
   /* tried out linking D_ij^mds_power to ||x_i-x_j||^mds_weightpow:
@@ -146,10 +184,11 @@ mds_once(Boolean doit, Boolean shepard, FILE* fpdat, FILE* fprow)
  * I can't tell how to handle this; I think because we're
  * rescaling in here somewhere, moving is getting messed up.
 */
+  mp = -1;
   if (xg->is_point_moving && xg->nearest_point != -1) {
-    k = xg->nearest_point;
+    mp = xg->nearest_point;
     for (j=0; j<xg->ncols_used; j++)
-      pos.data[k][j] = xg->raw_data[k][j] ;
+      pos.data[mp][j] = xg->raw_data[mp][j] ;
   }
 
   nchanged = 0;
@@ -200,9 +239,11 @@ mds_once(Boolean doit, Boolean shepard, FILE* fpdat, FILE* fprow)
        * if point i is selected for motion, skip over it:
        * that is, leave pos_grad[i][k] set to 0.
       */
+      /* AB try applying the gradient also to the moving point...
       else if (xg->is_point_moving && xg->nearest_point != -1 &&
           moving_point == i)
         ;
+      */
 
       /*
        * if we're using groups, and these two points don't meet
@@ -330,7 +371,9 @@ mds_once(Boolean doit, Boolean shepard, FILE* fpdat, FILE* fprow)
 */
 
     /* center at variable means and scale globally to -1,+1 */
-    scale_array_mean(&pos, pos.nrows, mds_dims);
+    /* AB scaling gets in the way somewhere... */
+    scale_array_meanx(&pos, pos.nrows, mds_dims, mp);
+    /*    */
   }
 
   stress_dx = accum_dx;  stress_dd = accum_dd;  stress_xx = accum_xx;

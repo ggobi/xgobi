@@ -48,8 +48,6 @@ init_scale_vars(xgobidata *xg)
     xg->is.x = xg->is.y = 0;
     xg->scale0.x = xg->scale0.y = DEF_SCALE;
     xg->scale.x = xg->scale.y = DEF_SCALE;
-    xg->tour_scale0.x = xg->tour_scale0.y = DEF_SCALE;
-    xg->tour_scale.x = xg->tour_scale.y = DEF_SCALE;
   }
 }
 
@@ -69,11 +67,8 @@ find_plot_center(xgobidata *xg)
 void
 tune_shift(xgobidata *xg, float prev_scale_x, float prev_scale_y)
 {
-  float scale_x = (xg->is_touring) ? xg->tour_scale.x : xg->scale.x;
-  float scale_y = (xg->is_touring) ? xg->tour_scale.y : xg->scale.y;
-
-  xg->shift_wrld.x = (int) (xg->shift_wrld.x * prev_scale_x / scale_x);
-  xg->shift_wrld.y = (int) (xg->shift_wrld.y * prev_scale_y / scale_y);
+  xg->shift_wrld.x = (int) (xg->shift_wrld.x * prev_scale_x / xg->scale.x);
+  xg->shift_wrld.y = (int) (xg->shift_wrld.y * prev_scale_y / xg->scale.y);
 }
 
 void
@@ -89,10 +84,8 @@ scale_proc(xgobidata *xg)
   /* These two should probably be defines */
   float low = 400;
   float high = 2000;
-  float *scale_x = (xg->is_touring) ? &xg->tour_scale.x : &xg->scale.x;
-  float *scale_y = (xg->is_touring) ? &xg->tour_scale.y : &xg->scale.y;
-  float prev_scale_x = *scale_x;
-  float prev_scale_y = *scale_y;
+  float prev_scale_x = xg->scale.x;
+  float prev_scale_y = xg->scale.y;
 
   /*
    * This makes the scaling amount get bigger the longer the
@@ -113,24 +106,24 @@ scale_proc(xgobidata *xg)
   switch(xg->scaling_btn)
   {
     case 0:
-      *scale_y += scalefac;
+      xg->scale.y += scalefac;
       break;
     case 1:
-      *scale_x += scalefac;
-      *scale_y += scalefac;
+      xg->scale.x += scalefac;
+      xg->scale.y += scalefac;
       break;
     case 2:
-      *scale_x += scalefac;
+      xg->scale.x += scalefac;
       break;
     case 5:
-      *scale_x -= MIN(scalefac, *scale_x - SCALE_MIN);
+      xg->scale.x -= MIN(scalefac, xg->scale.x - SCALE_MIN);
       break;
      case 4:
-      *scale_x -= MIN(scalefac, *scale_x - SCALE_MIN);
-      *scale_y -= MIN(scalefac, *scale_y - SCALE_MIN);
+      xg->scale.x -= MIN(scalefac, xg->scale.x - SCALE_MIN);
+      xg->scale.y -= MIN(scalefac, xg->scale.y - SCALE_MIN);
       break;
     case 3:
-      *scale_y -= MIN(scalefac, *scale_y - SCALE_MIN);
+      xg->scale.y -= MIN(scalefac, xg->scale.y - SCALE_MIN);
       break;
   }
 
@@ -323,10 +316,8 @@ move_by_mouse(xgobidata *xg)
 void
 scale_by_mouse(xgobidata *xg)
 {
-  float *scale_x = (xg->is_touring) ? &xg->tour_scale.x : &xg->scale.x;
-  float *scale_y = (xg->is_touring) ? &xg->tour_scale.y : &xg->scale.y;
-  float prev_scale_x = *scale_x;
-  float prev_scale_y = *scale_y;
+  float prev_scale_x = xg->scale.x;
+  float prev_scale_y = xg->scale.y;
 
   /*
    * Scale the scaler if far enough from center -- for the moment,
@@ -334,14 +325,14 @@ scale_by_mouse(xgobidata *xg)
   */
 
   if (s_ow.x - xg->cntr.x > 5 || xg->cntr.x - s_ow.x > 5)
-    *scale_x *= FLOAT(s_w.x - xg->cntr.x) / FLOAT(s_ow.x - xg->cntr.x);
+    xg->scale.x *= FLOAT(s_w.x - xg->cntr.x) / FLOAT(s_ow.x - xg->cntr.x);
 
   if (s_ow.y - xg->cntr.y > 5 || xg->cntr.y - s_ow.y > 5)
-    *scale_y *= FLOAT(s_w.y - xg->cntr.y) / FLOAT(s_ow.y - xg->cntr.y);
+    xg->scale.y *= FLOAT(s_w.y - xg->cntr.y) / FLOAT(s_ow.y - xg->cntr.y);
 
   /* Restore if too small. */
-  *scale_x = MAX(SCALE_MIN, *scale_x);
-  *scale_y = MAX(SCALE_MIN, *scale_y);
+  xg->scale.x = MAX(SCALE_MIN, xg->scale.x);
+  xg->scale.y = MAX(SCALE_MIN, xg->scale.y);
 
   /* Adjust the value of shift_wrld as required to keep cntr unchanged */
   tune_shift(xg, prev_scale_x, prev_scale_y);

@@ -539,20 +539,6 @@ update_lims(xgobidata *xg)
     xg->lim_tform[j].min = xg->lim[j].min;
     xg->lim_tform[j].max = xg->lim[j].max;
   }
-
-
-/*
- * Now override the values in lim and lim0 if necessary;
- * the values in lim_tform will remain the same.
-*/
-
-  /*
-   * Take sphered_data[], one column at a time, and generate
-   * each column min and max.
-  */
-/*  if (xg->is_princ_comp && xg->is_touring)
-    mean_lgdist(xg, xg->sphered_data);*/
-
 }
 
 void
@@ -661,12 +647,8 @@ plane_to_screen(xgobidata *xg)
 {
   int j, k;
   long nx, ny;
-/*  float scale_x = (xg->is_touring) ? xg->tour_scale.x : xg->scale.x;
-  float scale_y = (xg->is_touring) ? xg->tour_scale.y : xg->scale.y;*/
-  float scale_x = xg->scale.x;
-  float scale_y = xg->scale.y;
-  scale_x /= 2;
-  scale_y /= 2;
+  float scale_x = xg->scale.x / 2;
+  float scale_y = xg->scale.y / 2;
 
   /*
    * Calculate is, a scale factor.  Either force the plot to be
@@ -679,14 +661,6 @@ plane_to_screen(xgobidata *xg)
   xg->is.y = (xg->plot_square) ?
     (long) (-1 * xg->minxy * scale_y) :
     (long) (-1 * xg->max.y * scale_y);
-
-/*  if (xg->is_princ_comp && xg->is_touring) {
-    * multiply by fudge factor so that dimension is 
-     * accounted for in screen scaling
-    *
-     xg->is.x = (long)((float)xg->is.x*(float)FUDGE_FACTOR);
-     xg->is.y = (long)((float)xg->is.y*(float)FUDGE_FACTOR);
-  }*//* sphere*/
 
   /*
    * Calculate new coordinates.

@@ -81,13 +81,8 @@ scale_reset_cback(Widget w, xgobidata *xg, XtPointer callback_data)
  * Reset the screen image to original scale.
 */
 {
-  if (!xg->is_touring) {
-    xg->scale.x = xg->scale0.x;
-    xg->scale.y = xg->scale0.y;
-  } else {
-    xg->tour_scale.x = xg->tour_scale0.x;
-    xg->tour_scale.y = xg->tour_scale0.y;
-  }
+  xg->scale.x = xg->scale0.x;
+  xg->scale.y = xg->scale0.y;
 
   plane_to_screen(xg);
 

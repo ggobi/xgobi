@@ -196,21 +196,65 @@ get_sph_vars(xgobidata *xg)
 }
 
 void
+restore_sph_labs(xgobidata *xg)
+{
+  int j;
+
+  for (j=0; j<xg->ncols_used; j++)
+  {
+    (void) sprintf(xg->collab_tform2[j], "%s", 
+      xg->collab_tform1[j]);
+    XtVaSetValues(varlabel[j], XtNlabel, 
+      xg->collab_tform2[j], NULL);
+  }
+}
+
+void
 set_sph_labs(xgobidata *xg, int numpcs)
 {
   int j;
 
-  for (j=0; j<numpcs; j++)
-  {
-    (void) sprintf(xg->collab_tform2[j], "PC(%s)%d", xg->collab_tform1[j],j+1);
-    XtVaSetValues(varlabel[j], XtNlabel, xg->collab_tform2[j], NULL);
+  if (!xg->is_touring) {
+    for (j=0; j<numpcs; j++)
+    {
+      (void) sprintf(xg->collab_tform2[xg->sph_vars[j]], "PC %d", j+1);
+      XtVaSetValues(varlabel[xg->sph_vars[j]], XtNlabel, 
+	xg->collab_tform2[xg->sph_vars[j]], NULL);
+    }
+    for (j=numpcs; j<xg->nsph_vars; j++)
+    {
+      (void) sprintf(xg->collab_tform2[xg->sph_vars[j]], "not used PC %d", 
+        j+1);
+      XtVaSetValues(varlabel[xg->sph_vars[j]], XtNlabel, 
+        xg->collab_tform2[xg->sph_vars[j]], NULL);
+    }
+  }    
+  else {
+    if (xg->is_pc_axes) {
+      for (j=0; j<numpcs; j++)
+      {
+        (void) sprintf(xg->collab_tform2[xg->sph_vars[j]], "PC %d", j+1);
+        XtVaSetValues(varlabel[xg->sph_vars[j]], XtNlabel, 
+	  xg->collab_tform2[xg->sph_vars[j]], NULL);
+      }
+      for (j=numpcs; j<xg->nsph_vars; j++)
+      {
+        (void) sprintf(xg->collab_tform2[xg->sph_vars[j]], "not used PC %d", 
+          j+1);
+        XtVaSetValues(varlabel[xg->sph_vars[j]], XtNlabel, 
+          xg->collab_tform2[xg->sph_vars[j]], NULL);
+      }
+    }    
+    else {
+      for (j=0; j<xg->nsph_vars; j++)
+      {
+        (void) sprintf(xg->collab_tform2[xg->sph_vars[j]], "%s", 
+          xg->collab_tform1[xg->sph_vars[j]]);
+        XtVaSetValues(varlabel[xg->sph_vars[j]], XtNlabel, 
+          xg->collab_tform2[xg->sph_vars[j]], NULL);
+      }
+    }
   }
-  for (j=numpcs; j<xg->nsph_vars; j++)
-  {
-    (void) sprintf(xg->collab_tform2[j], "not used PC(%s)%d", xg->collab_tform1[j],j+1);
-    XtVaSetValues(varlabel[j], XtNlabel, xg->collab_tform2[j], NULL);
-  }
-  
 }
 
 void
@@ -1477,7 +1521,8 @@ open_tform_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
 
 float
 inv_transform(int icase, int jvar, xgobidata *xg) {
-  double tx = xg->tform1[icase][jvar];
+/*-- using tform2 instead of tform1 -- AB --*/
+  double tx = xg->tform2[icase][jvar];
   double rx = xg->raw_data[icase][jvar];
   double new_rx = tx;
 

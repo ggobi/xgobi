@@ -531,8 +531,6 @@ typedef struct {
  Widget scale_mouse;
  fcoords scale;
  fcoords scale0;
- fcoords tour_scale;
- fcoords tour_scale0;
  icoords shift_wrld;
  Boolean is_scaling;
  Boolean run_shift_proc, run_scale_proc;

@@ -11,16 +11,13 @@
 
 /**/#  Set XGOBID to the directory containing 
 /**/#  the xgobi directories src, help, ps, etc.
-         #XGOBID = $(PWD)/..
-# I'm defining DEFAULTDIR without using XGOBID; I suddenly
-# starting having a weird problem with PWD.  If you're not
-# building xgobi as we hand it out, this shouldn't bother
-# you at all.
-            #CC = cc
-     #CCOPTIONS = -xansi -n32 -woff 1116
+         XGOBID = $(PWD)/..
 
-            CC = gcc
-     CCOPTIONS = -ansi -w
+             CC = cc
+      CCOPTIONS = -xansi -n32
+
+           #CC = gcc
+    #CCOPTIONS = -ansi -w
 
              LD = 
      CDEBUGFLAGS = -g
@@ -60,8 +57,8 @@
 #else
    SYS_LIBRARIES = -lm
 #endif
-         DEFINES = -D$(R) -DDEFAULTDIR=\"$(PWD)/..\"
-        #DEFINES = -D$(R) -DDEFAULTDIR=\"$(XGOBID)/..\"
+        #DEFINES = -D$(R) -DDEFAULTDIR=\"$(PWD)/..\"
+         DEFINES = -D$(R) -DDEFAULTDIR=\"$(XGOBID)\"
 
 JOINTSRC = xgobi_init.c pipeline.c read_array.c \
 	initialize.c widgets.c callbacks.c getfname.c \

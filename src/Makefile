@@ -2,7 +2,7 @@
 # $XConsortium: imake.c /main/90 1996/11/13 14:43:23 lehors $
 
 # ----------------------------------------------------------------------
-# Makefile generated from "Imake.tmpl" and </tmp/IIf.a0HHgO>
+# Makefile generated from "Imake.tmpl" and </tmp/IIf.a0H_oW>
 # $TOG: Imake.tmpl /main/245 1997/05/20 10:05:47 kaleb $
 #
 
@@ -161,7 +161,7 @@ CXXEXTRA_INCLUDES =
     INSTKMEMFLAGS = -m 2755 -g sys
 
       CDEBUGFLAGS = $(OPTIMIZER)
-        CCOPTIONS = -xansi $(SGIABIOPTS) $(SGIABIDEFS)
+        CCOPTIONS = -xansi $(SGIABIOPTS) $(SGIABIDEFS) -w
 
       ALLINCLUDES = $(INCLUDES) $(EXTRA_INCLUDES) $(TOP_INCLUDES) $(STD_INCLUDES)
        ALLDEFINES = $(ALLINCLUDES) $(STD_DEFINES) $(EXTRA_DEFINES) $(PROTO_DEFINES) $(THREADS_DEFINES) $(DEFINES)
@@ -510,16 +510,13 @@ CXXPROJECT_DEFINES =
 
 #  Set XGOBID to the directory containing
 #  the xgobi directories src, help, ps, etc.
-         #XGOBID = $(PWD)/..
-# I'm defining DEFAULTDIR without using XGOBID; I suddenly
-# starting having a weird problem with PWD.  If you're not
-# building xgobi as we hand it out, this shouldn't bother
-# you at all.
-             CC = cc
-      CCOPTIONS = -xansi -n32 -woff 1116
+         XGOBID = $(PWD)/..
 
-            #CC = gcc
-     #CCOPTIONS = -ansi -w
+             CC = cc
+      CCOPTIONS = -xansi -n32
+
+           #CC = gcc
+    #CCOPTIONS = -ansi -w
 
              LD =
      CDEBUGFLAGS = -g
@@ -544,8 +541,8 @@ CXXPROJECT_DEFINES =
 
    SYS_LIBRARIES = -lm
 
-         DEFINES = -D$(R) -DDEFAULTDIR=\"$(PWD)/..\"
-        #DEFINES = -D$(R) -DDEFAULTDIR=\"$(XGOBID)/..\"
+        #DEFINES = -D$(R) -DDEFAULTDIR=\"$(PWD)/..\"
+         DEFINES = -D$(R) -DDEFAULTDIR=\"$(XGOBID)\"
 
 JOINTSRC = xgobi_init.c pipeline.c read_array.c \
 	initialize.c widgets.c callbacks.c getfname.c \
