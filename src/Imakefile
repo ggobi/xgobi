@@ -6,7 +6,7 @@
 
 /**/# Remove the comment delimeters on the second to next line to compile for CORBA.
 /**/# Requires some Omegahat code - see README.corba.
-#define USE_CORBA 1
+/**/#define USE_CORBA 1
 
 /**/#  Set XGOBID to the directory containing 
 /**/#  the xgobi directories src, help, ps, etc.
