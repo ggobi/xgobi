@@ -137,4 +137,4 @@ dnl AC_CHECK_FUNCS(ftime gethostname select)
 
 
 dnl Write the configured versions of Makefile.in and Makeconf.in
-AC_OUTPUT(Makefile Makeconf  Makefile.rules Makefile.corba)
+AC_OUTPUT(Makefile Makeconf  Makefile.rules)
