@@ -56,7 +56,7 @@
        CCOPTIONS = -Aa -D_HPUX_SOURCE -DXLIB_ILLEGAL_ACCESS 
 #endif
 
- LOCAL_LIBRARIES =  $(CORBA_LIBRARIES) XawClientLibs
+ LOCAL_LIBRARIES =  XawClientLibs
 #ifdef DCE_RPC
    SYS_LIBRARIES = -lm -ldce -lpthread
 #else
@@ -164,7 +164,7 @@ foo:
 	echo $(USRLIBDIR)
 	echo "$(LDPRELIBS) $(origin LDPRELIBS)"
 
-SingleProgramTarget(xgobi, $(XGOBIOBJ), NullParameter, $(LOCAL_LIBRARIES))
+SingleProgramTarget(xgobi, $(XGOBIOBJ), NullParameter, $(CORBA_LIBRARIES) $(LOCAL_LIBRARIES))
 SingleProgramTarget(xgvis, $(XGVISOBJ), NullParameter, $(LOCAL_LIBRARIES))
 
 purexgobi: xgobi.o $(JOINTOBJ)
