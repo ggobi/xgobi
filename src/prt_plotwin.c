@@ -51,6 +51,11 @@
 #include "xgobivars.h"
 #include "xgobiexterns.h"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+
 static jmp_buf env;
 
 /*ARGSUSED*/

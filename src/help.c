@@ -29,6 +29,12 @@
 #include "xgobivars.h"
 #include "xgobiexterns.h"
 
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+
 #define NMENUS NCOLS+40
 #define NSBARS 32
 #define NCOMMANDS 512

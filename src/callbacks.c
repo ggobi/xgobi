@@ -32,6 +32,11 @@
 #include "xgobivars.h"
 #include "xgobiexterns.h"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+
 /* CORBA */
 Boolean selectVariable(xgobidata *xg, int j, int button, int state);
 
