@@ -109,7 +109,7 @@ get_center_scale(void)
   n = 0;
   pos_scl = 0.;
   for(i=0; i<pos.nrows; i++)
-    if(point_status[i] =! point_is_out) {
+    if(point_status[i] != point_is_out) {
       for(k=0; k<mds_dims; k++) 
         pos_scl += ((pos.data[i][k] - pos_mean[k]) *
                     (pos.data[i][k] - pos_mean[k]));
@@ -694,23 +694,38 @@ mds_once(Boolean doit)
 	  resid = (dist_trans - dist_config);
 	  */
 	  if(mds_lnorm != 2) { /* non-Euclidean Minkowski/Lebesgue metric */
-	    step_mag = weight * resid * pow(dist_config, 1 - mds_lnorm_over_distpow);
-	    for (k = 0; k < mds_dims; k++) {
-	      gradient.data[i][k] += 
-		step_mag * 
-		sig_pow(pos.data[i][k]-pos.data[j][k], mds_lnorm-1.0);
+	    step_mag = weight * resid *
+          pow(dist_config, 1 - mds_lnorm_over_distpow);
+        for (k = 0; k < mds_dims; k++) {
+          gradient.data[i][k] += 
+            step_mag * sig_pow(pos.data[i][k]-pos.data[j][k], mds_lnorm-1.0);
 	    }
-	  } else { /* Euclidean Minkowski/Lebesgue metric */
-	    if(mds_distpow == 1)      { step_mag = weight * resid / dist_config; }
-	    else if(mds_distpow == 2) { step_mag = weight * resid; }
-	    else if(mds_distpow == 3) { step_mag = weight * resid * dist_config; }
-	    else if(mds_distpow == 4) { step_mag = weight * resid * dist_config * dist_config; }
-	    else                      { step_mag = weight * resid * pow(dist_config, mds_distpow-2.); }
-	    for (k = 0; k < mds_dims; k++) {
-	      gradient.data[i][k] += step_mag * (pos.data[i][k]-pos.data[j][k]); /* Euclidean! */
-	    }
-	  }
-	} else { /* CLASSIC */
+      } else { /* Euclidean Minkowski/Lebesgue metric */
+        if (mds_distpow == 1)      {
+printf ("mds_dispow == 1\n");
+          step_mag = weight * resid / dist_config;
+        }
+        else if (mds_distpow == 2) {
+printf ("mds_dispow == 2\n");
+          step_mag = weight * resid;
+        }
+        else if (mds_distpow == 3) {
+printf ("mds_dispow == 3\n");
+          step_mag = weight * resid * dist_config;
+        }
+        else if (mds_distpow == 4) {
+printf ("mds_dispow == 4\n");
+          step_mag = weight * resid * dist_config * dist_config;
+        }
+        else {
+          step_mag = weight * resid * pow(dist_config, mds_distpow-2.);
+        }
+        for (k = 0; k < mds_dims; k++) {
+          /* Euclidean! */
+          gradient.data[i][k] += step_mag * (pos.data[i][k]-pos.data[j][k]);
+        }
+      }
+    } else { /* CLASSIC */
 	  /* scale independent version: */
  	  resid = (dist_trans - stress_dx / stress_xx * dist_config);
 	  /**/
