@@ -1520,7 +1520,6 @@ xgobidata *xg)
     */
     if ( (fp = open_xgobi_file(rootname, 1, suffixes, "r", true)) != NULL)
       found = True;
-    }
 
     if (found) {
       /*
@@ -1610,9 +1609,10 @@ xgobidata *xg)
         fprintf(stderr,
           "colors, click right on the Color Menu button.\n");
       }
-
+    }
   }
-  return(ok);
+
+  return(found && ok);
 }
 
 /* ARGSUSED */
