@@ -731,7 +731,7 @@ make_tour(xgobidata *xg)
  * Button for switching to principal component axes
 */
   xg->princ_comp_cmd = CreateToggle(xg, "PC Basis",
-    False, (Widget) NULL, xg->tour_io_menu_cmd, (Widget) NULL, False,
+    True, (Widget) NULL, xg->tour_io_menu_cmd, (Widget) NULL, False,
     ANY_OF_MANY,
     tour_panel, "Tour_PrinComp");
   XtManageChild(xg->princ_comp_cmd);

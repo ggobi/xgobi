@@ -213,6 +213,7 @@ void
 set_sph_labs(xgobidata *xg, int numpcs)
 {
   int j;
+  char tmpchar[COLLABLEN];
 
   if (!xg->is_touring) {
     for (j=0; j<numpcs; j++)
@@ -250,8 +251,9 @@ set_sph_labs(xgobidata *xg, int numpcs)
       {
         (void) sprintf(xg->collab_tform2[xg->sph_vars[j]], "%s", 
           xg->collab_tform1[xg->sph_vars[j]]);
+        (void) sprintf(tmpchar, "PC %d",j+1);
         XtVaSetValues(varlabel[xg->sph_vars[j]], XtNlabel, 
-          xg->collab_tform2[xg->sph_vars[j]], NULL);
+          tmpchar, NULL);
       }
     }
   }
@@ -1245,7 +1247,7 @@ open_tform_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
   if (tpopup == NULL) {
     tform_cols = (int *) XtMalloc((Cardinal) (xg->ncols-1) * sizeof(int));
     var_cbox = (Widget *) XtMalloc((Cardinal) (xg->ncols-1) * sizeof(Widget));
-    xg->sph_vars = (int *) XtMalloc((Cardinal) (xg->ncols-1) * sizeof(int));/* sphere*/
+    /*    xg->sph_vars = (int *) XtMalloc((Cardinal) (xg->ncols-1) * sizeof(int));* sphere - moved back to tour_pp */
     
     alloc_transform_tp(xg);
 

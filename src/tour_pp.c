@@ -247,6 +247,8 @@ alloc_std_vars(xgobidata *xg)
     vc_active[i] = (float *) XtMalloc(nc * sizeof(float));
     b[i] = (float *) XtMalloc(nc * sizeof(float));
   }
+
+  xg->sph_vars = (int *) XtMalloc((Cardinal) (xg->ncols-1) * sizeof(int));/* sphere*/
 }
 
 void
@@ -270,6 +272,8 @@ free_std_vars(xgobidata *xg)
   for (i=0; i<xg->ncols; i++)
     XtFree((XtPointer)b[i]);
   XtFree((XtPointer)b);
+
+  XtFree((XtPointer)xg->sph_vars);
 }
 
 void
@@ -976,25 +980,33 @@ princ_comp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
  * switch between principal axes and variable axes
 */
 {
-  int j, k;
+  int i, j, k;
   Boolean is_one;
+  char message[MSGLENGTH];
 
-/*  if (xg->is_princ_comp)
+  if (xg->is_princ_comp)
   {
-    * convert back to variable axes *
+    /* convert back to variable axes */
     xg->is_princ_comp = False;
     reset_var_labels(xg, PRINCCOMP_OFF);
     set_sens_pc_axes(False, xg);
 
-    xg->nhist_list = 2;* this isn't done inside
-           reinit_tour_hist because it sometimes is 0,1. *
-    xg->old_nhist_list = -1; * reset it different to xg->nhist_list
+    xg->nhist_list = 2;/* this isn't done inside
+           reinit_tour_hist because it sometimes is 0,1. */
+    xg->old_nhist_list = -1; /* reset it different to xg->nhist_list
                            because there it is used in a check in
-                           store_basis() *
+                           store_basis() */
     reinit_tour_hist(xg);
     reset_backtrack_cmd(false, false, false, false);
     set_bt_firsttime();
     nback_update_label(xg);
+
+    for (j=0; j<xg->nsph_vars; j++) {
+      for (i=0; i<xg->nrows; i++) {
+        xg->tform2[i][xg->sph_vars[j]] = xg->tform1[i][xg->sph_vars[j]];
+      }
+    }
+    xg->nsph_vars=0;
 
     init_basis(xg);
     zero_tau(xg);
@@ -1016,8 +1028,11 @@ princ_comp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
   }
   else
   {
-* needs to be done for linked touring *
-*    if (update_vc_active_and_do_svd(xg, xg->numvars_t, xg->tour_vars))
+
+    xg->is_princ_comp = True;
+
+/* needs to be done for linked touring */
+    if (update_vc_active_and_do_svd(xg, xg->numvars_t, xg->tour_vars))
       spherize_data(xg, xg->numvars_t, xg->numvars_t, xg->tour_vars);
     else
     {
@@ -1030,12 +1045,10 @@ princ_comp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
       reset_princ_comp(False, xg);
     }
     else
-    {*/
-
-     
-/*      set_sens_pc_axes(True, xg);
+    {
+      set_sens_pc_axes(True, xg);
   
-  * in case variables are fading out zero them now *
+  /* in case variables are fading out zero them now */
       for (j=0; j<xg->ncols_used; j++)
       {
         is_one = False;
@@ -1055,18 +1068,35 @@ princ_comp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
       copy_basis(xg->u0, xg->u1, xg->ncols_used);
       copy_u0_to_pd0(xg);
       copy_basis(xg->u0, xg->v1, xg->ncols_used);
+      /* need to spherize data here. */
+      /* set the shp_vars to the active vars, and set the tform type to sphere */
+      for (k=0; k<xg->numvars_t; k++)
+	xg->sph_vars[k] = xg->tour_vars[k];
+      xg->nsph_vars = xg->numvars_t;
+      set_sph_tform_tp(xg);
+
+      if (eigenval[0]/eigenval[xg->nsph_vars-1] > 10000.0) {
+        sprintf(message, "Use transformation tools to choose less PCs. Var-cov close to singular.\n");
+        show_message(message, xg);
+      }
+      else {
+        spherize_data(xg, xg->nsph_vars, xg->nsph_vars, xg->sph_vars);
+	/*        set_sph_labs(xg, xg->nsph_vars); this sets the
+                     labels on the tform panel, so don't do it here */
+      }
+
       update_lims(xg);
       update_world(xg);
       tour_var_lines(xg);
   
-      * convert to principal component axes *
+      /* convert to principal component axes */
       reset_var_labels(xg, PRINCCOMP_ON);
   
-      xg->nhist_list = 2; * this isn't done inside
-             reinit_tour_hist because it sometimes is 1,2. *
-      xg->old_nhist_list = -1; * reset it different to xg->nhist_list
+      xg->nhist_list = 2; /* this isn't done inside
+             reinit_tour_hist because it sometimes is 1,2. */
+      xg->old_nhist_list = -1; /* reset it different to xg->nhist_list
                              because there it is used in a check in
-                             store_basis() *
+                             store_basis() */
       reinit_tour_hist(xg);
       reset_backtrack_cmd(false, false, false, false);
       set_bt_firsttime();
@@ -1087,7 +1117,7 @@ princ_comp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
       if (xg->is_pp_optimz)
         xg->new_direction_flag = True;
     }
-  }*/
+  }
   setToggleBitmap(w, xg->is_princ_comp);
 }
 
@@ -1100,7 +1130,6 @@ pc_axes_cback(Widget w, xgobidata *xg, XtPointer callback_data)
 {
   xg->is_pc_axes = !xg->is_pc_axes;
   setToggleBitmap(w, xg->is_pc_axes);
-  set_sph_labs(xg, xg->nsph_vars);
 
   plot_once(xg);
 }
@@ -1671,7 +1700,7 @@ tour_pp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
       pow((double) xg->nlinkable_in_plot, (double)(1.0/6.0)); /*11/23/99*/
     min_bandwidth = 0.05*optimal_bandwidth;
     max_bandwidth = 5.0*optimal_bandwidth;
-    if (!check_sph_on(xg->numvars_t, xg->tour_vars))
+    /*    if (!check_sph_on(xg->numvars_t, xg->tour_vars))
     {
        char message[5*MSGLENGTH];
        char str[MSGLENGTH];
@@ -1693,11 +1722,11 @@ tour_pp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
         show_message(message, xg);
         singular_vc = True;
         
+    }*/
+    if (!xg->is_princ_comp)
+    {
+      XtCallCallbacks(xg->princ_comp_cmd, XtNcallback, (XtPointer) xg);
     }
-/*    if (!xg->is_princ_comp)
-    {*/
-/*      XtCallCallbacks(xg->princ_comp_cmd, XtNcallback, (XtPointer) xg);*/
-/*    }*/
     
     if (singular_vc)
       reset_pp_cmd(False, xg);
