@@ -22,7 +22,9 @@ JOINTSRC = xgobi_init.c pipeline.c read_array.c \
 	legendre.c hermite.c natrl_hermite.c de_indices.c \
 	central_mass.c holes.c skewness.c \
 	tour_section.c corr.c corr_index.c corr_pursuit.c corr_util.c \
-	DrawingA.c
+	DrawingA.c \
+        mt19937-1.c sphere.c
+
 JOINTOBJ = xgobi_init.o pipeline.o read_array.o \
 	initialize.o widgets.o callbacks.o getfname.o \
 	xyplot.o make_axes.o line_editor.o missing.o  \
@@ -38,7 +40,8 @@ JOINTOBJ = xgobi_init.o pipeline.o read_array.o \
 	legendre.o hermite.o natrl_hermite.o de_indices.o \
 	central_mass.o holes.o skewness.o \
 	tour_section.o corr.o corr_index.o corr_pursuit.o corr_util.o \
-	DrawingA.o
+	DrawingA.o \
+        mt19937-1.o sphere.o
 
 
 
