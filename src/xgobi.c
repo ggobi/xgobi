@@ -539,6 +539,9 @@ main(int argc, char *argv[])
   XtAppAddActions(app_con, added_actions, XtNumber(added_actions));
   mono = find_mono();
 
+
+
+
 /*
  * Initialize a few values before beginning to read the
  * command line.
