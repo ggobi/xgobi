@@ -93,7 +93,7 @@ get_center(void)
   n = 0;
   for(k=0; k<mds_dims; k++) { pos_mean[k] = 0.; }
   for(i=0; i<pos.nrows; i++)
-    if(point_status[i] != point_is_out) {
+    if(point_status[i] != point_is_out && point_status[i] != point_is_dragging) {
       for(k=0; k<mds_dims; k++) 
         pos_mean[k] += pos.data[i][k];
       n++;
@@ -111,7 +111,7 @@ get_center_scale(void)
   n = 0;
   pos_scl = 0.;
   for(i=0; i<pos.nrows; i++)
-    if(point_status[i] != point_is_out) {
+    if(point_status[i] != point_is_out && point_status[i] != point_is_dragging) {
       for(k=0; k<mds_dims; k++) 
         pos_scl += ((pos.data[i][k] - pos_mean[k]) *
                     (pos.data[i][k] - pos_mean[k]));
@@ -128,7 +128,7 @@ center_pos(void)
   get_center();
 
   for (i=0; i<pos.nrows; i++)
-    if(point_status[i] != point_is_out)
+    if(point_status[i] != point_is_out && point_status[i] != point_is_dragging)
       for (k=0; k<mds_dims; k++)
         pos.data[i][k] -= pos_mean[k];
 }
@@ -142,7 +142,7 @@ scale_pos(void)
   get_center_scale();
 
   for (i=0; i<pos.nrows; i++)
-    if(point_status[i] != point_is_out)
+    if(point_status[i] != point_is_out && point_status[i] != point_is_dragging)
       for (k=0; k<mds_dims; k++)
         pos.data[i][k] = (pos.data[i][k] - pos_mean[k])/pos_scl + pos_mean[k];
 }
@@ -155,7 +155,7 @@ center_scale_pos(void)
   get_center_scale();
 
   for (i=0; i<pos.nrows; i++)
-    if(point_status[i] != point_is_out)
+    if(point_status[i] != point_is_out && point_status[i] != point_is_dragging)
       for (k=0; k<mds_dims; k++)
         pos.data[i][k] = (pos.data[i][k] - pos_mean[k])/pos_scl;
 }
@@ -558,7 +558,9 @@ mds_once(Boolean doit)
   }
   /* dragged by mouse */
   if (xg->is_point_moving && moving_point != -1) {
-    if(move_type==0) { point_status[moving_point] = point_is_dragged; }
+    if(move_type==0) {
+       point_status[moving_point] = point_is_dragged;
+    }
     else if(move_type==1) {
       for (i=0; i<pos.nrows; i++)
         if (point_status[i] != point_is_out && SAMEGLYPH(i,moving_point)) 
@@ -715,21 +717,19 @@ mds_once(Boolean doit)
                 sig_pow(pos.data[i][k]-pos.data[j][k], mds_lnorm-1.0);
             }
           } else { /* Euclidean Minkowski/Lebesgue metric */
-            if (mds_distpow == 1)      {
+            /* Note the simplification of the code for the special
+             * cases when mds_distpow takes on an integer value.  */
+            if (mds_distpow == 1)
               step_mag = weight * resid / dist_config;
-            }
-            else if (mds_distpow == 2) {
+            else if (mds_distpow == 2)
               step_mag = weight * resid;
-            }
-            else if (mds_distpow == 3) {
+            else if (mds_distpow == 3)
               step_mag = weight * resid * dist_config;
-            }
-            else if (mds_distpow == 4) {
+            else if (mds_distpow == 4)
               step_mag = weight * resid * dist_config * dist_config;
-            }
-            else {
+            else
               step_mag = weight * resid * pow(dist_config, mds_distpow-2.);
-            }
+
             for (k = 0; k < mds_dims; k++) {
               /* Euclidean! */
               gradient.data[i][k] += step_mag * (pos.data[i][k]-pos.data[j][k]);
