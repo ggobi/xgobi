@@ -124,7 +124,7 @@ void bin_fts_deriv (float **data, float **proj_data,
 */
 
 {
-  float indx_val, tmpf, dm, hf;/* window_width3;*/
+  float tmpf, dm, hf;/* window_width3;*/
   int i, j, m, start, k, ki, kj;
   long dist, tmplx, h, tmply;
 

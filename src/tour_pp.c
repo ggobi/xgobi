@@ -1596,7 +1596,7 @@ tour_pp_cback(Widget w, xgobidata *xg, XtPointer callback_data)
  * This callback turns on/off projection pursuit guiding.
 */
 {
-  int i, j;
+  int i;
   float ftmp;
   static int firsttime = 1;
 

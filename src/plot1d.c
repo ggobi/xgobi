@@ -178,7 +178,7 @@ plot1d_texture_var(xgobidata *xg)
   yy = (float *) XtMalloc((Cardinal) xg->nrows_in_plot * sizeof(float));
 
   for (i=0; i<xg->nrows_in_plot; i++)
-    yy[i] = xg->tform2[i][jvar];
+    yy[i] = xg->tform2[ xg->rows_in_plot[i] ][jvar];
 
   if (plot1d_type == ASH) {
     float min, max;

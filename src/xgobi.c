@@ -57,7 +57,7 @@ xgobidata xgobi;
 
 
 static char message[MSGLENGTH];
-static char *version_date = "September 19, 2001";
+static char *version_date = "November 29, 2001";
 
 /*
  * These are the panel resources defined uniquely for AtoXgob
@@ -383,11 +383,11 @@ parse_command_line(int *ac, char **av, char *data_in, xgobidata *xg)
      *   -vtitle '"abc def"'
      */
       if (av[2][0] == '\'')
-        (void) sscanf (&av[2][1], "%[^']s", &xgobi.vtitle);
+        (void) sscanf (&av[2][1], "%[^']s", xgobi.vtitle);
       else if (av[2][0] == '"')
-        (void) sscanf (&av[2][1], "%[^\"]s", &xgobi.vtitle);
+        (void) sscanf (&av[2][1], "%[^\"]s", xgobi.vtitle);
       else
-        (void) sscanf (av[2], "%s", &xgobi.vtitle);
+        (void) sscanf (av[2], "%s", xgobi.vtitle);
       av++; (*ac)--;
     }
 

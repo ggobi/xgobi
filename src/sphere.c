@@ -189,15 +189,13 @@ open_sphere_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
   Widget close;
   Widget form0;
   Dimension width, height;
-  register int j, k;
+  register int j;
   Widget box[2];
   Boolean do_svd = false;
   char npc_lab[5], tickmk[5];
   int xstrt, ystrt, xpos, ypos;
   char message[MSGLENGTH];
   
-  Dimension maxwidth = 0;
-
   if (!is_sphere_mapped) {
      
     if (spopup == NULL) {
@@ -258,7 +256,7 @@ open_sphere_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
       XtAddCallback(select_npc, XtNcallback,
         (XtCallbackProc) select_npc_cback, (XtPointer) xg);
 
-      sprintf(npc_lab,"%d %",xg->nsph_vars);
+      sprintf(npc_lab,"%d", xg->nsph_vars);
       npc = XtVaCreateManagedWidget("Inference",
         asciiTextWidgetClass, box[0],
         XtNfromHoriz, (Widget) select_npc,

@@ -178,7 +178,7 @@ which_cols(int *cols, int varno, xgobidata *xg) {
 void
 get_sph_vars(xgobidata *xg)
 {
-  int j, k;
+  int j;
   Boolean state;
    
   xg->nsph_vars = 0;
@@ -319,7 +319,7 @@ mean_stddev(xgobidata *xg, int col, float (*stage1)(float),
  * Use the function pointer to domain_adj.
 */
 {
-  int i, j, n;
+  int i;
   double sumxi = 0.0, sumxisq = 0.0;
   double dx, dmean, dvar, dstddev;
   double dn = (double) (xg->nrows);
@@ -344,7 +344,7 @@ median(xgobidata *xg, float **data, int jvar)
  * Find the minimum and maximum values of each column or variable
  * group scaling by median and largest distance
 */
-  int i, j, k, n, np;
+  int /* i, j, k, n, */ np;
   float *x;
   double dmedian = 0;
   extern int fcompare(const void *, const void *);
@@ -352,12 +352,12 @@ median(xgobidata *xg, float **data, int jvar)
   np = xg->nrows_in_plot;
   x = (float *) XtMalloc((Cardinal) np * sizeof(float));
 /*  for (n=0; n<ncols; n++) {
-    j = jvar;/*cols[n];*/
+    j = jvar;
     for (i=0; i<xg->nrows_in_plot; i++) {
       k = xg->rows_in_plot[i];
       x[n*xg->nrows_in_plot + k] = data[k][j];
     }
-/*  }*/
+  }*/
 
   qsort((void *) x, np, sizeof(float), fcompare);
   dmedian = ((np % 2) != 0) ?  x[(np-1)/2] : (x[np/2-1] + x[np/2])/2. ;
@@ -873,8 +873,10 @@ transform1(xgobidata *xg, int *cols, int ncols, float *incr,
 static void
 tform_response(xgobidata *xg, int *cols, int ncols)
 {
-  int j, n, gid;
+  int j, n;
+/*
   Boolean reset_vgroups = false;
+*/
 
   /*
    * Reset vgroups?
@@ -941,7 +943,7 @@ tform_response(xgobidata *xg, int *cols, int ncols)
 static XtCallbackProc
 stage1_tform_cback(Widget w, xgobidata *xg, XtPointer cbdata)
 {
-  int tfno, j, k, groupno;
+  int tfno, j /*, k, groupno*/;
   Boolean state;
 
   for (tfno=0; tfno<N1TFORMS; tfno++)

@@ -391,21 +391,25 @@ make_move_points(xgobidata *xg) {
     XtNright, (XtEdgeType) XtChainLeft,
     XtNbottom, (XtEdgeType) XtChainTop,
     NULL);
+  if (mono) set_mono(movePanel);
   move_type_cmd[0] = XtVaCreateWidget("XGVToggle",
     toggleWidgetClass, movePanel,
     XtNstate, (Boolean) True,
     XtNlabel, (String) "Move Point  ",
     NULL);
+  if (mono) set_mono(move_type_cmd[0]);
   move_type_cmd[1] = XtVaCreateWidget("XGVToggle",
     toggleWidgetClass, movePanel,
     XtNlabel, (String) "Move Group",
     XtNradioGroup, move_type_cmd[0],
     NULL);
+  if (mono) set_mono(move_type_cmd[1]);
   move_type_cmd[2] = XtVaCreateWidget("XGVToggle",
     toggleWidgetClass, movePanel,
     XtNlabel, (String) "Move All      ",
     XtNradioGroup, move_type_cmd[0],
     NULL);
+  if (mono) set_mono(move_type_cmd[2]);
   XtManageChildren(move_type_cmd, 3);
 
   setToggleBitmap(move_type_cmd[0], True);

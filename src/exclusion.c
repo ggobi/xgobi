@@ -40,7 +40,7 @@ Position popupx = -1, popupy = -1;
 int nclust_prev = 0;
 cluster *clusv_prev;
 
-void
+static void
 draw_cluster_symbol(xgobidata *xg, int k) {
 /*
  * Draw the current glyph in the current color in the
@@ -112,7 +112,7 @@ draw_cluster_symbol(xgobidata *xg, int k) {
   XSync(display, False);
 }
 
-void
+static void
 mark_cluster_symbol(xgobidata *xg, int k, int yes) {
 /*
  * Draw the current glyph in the current color in the
@@ -207,7 +207,7 @@ symbol_expose_cb(Widget w, xgobidata *xg, XawDrawingAreaCallbackStruct *cdata)
 /*
  * Before going down, save the group names
 */
-static void
+void
 save_group_names(xgobidata *xg) {
   int k;
   String gname;
@@ -275,7 +275,6 @@ static XtCallbackProc
 exclude_cback(Widget w, xgobidata *xg, XtPointer callback_data)
 {
   int i, k;
-  Boolean excluded;
 
   for (k=0; k<xg->nclust; k++) {
     if (w == exclude_tgl[k]) {

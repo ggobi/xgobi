@@ -40,9 +40,8 @@ Widget sort_cmd;
 Widget perm_cmd, perm_anim, perm_mult, perm_nmult;
 Widget norm_cmd, norm_anim, brush_tog, vgroup_tog, restore_cmd;
 static Boolean inf_vgroup = False;
-static Boolean inf_bgroup = False;
 static Widget *varlabel;
-static int    ntform_cols, *tform_cols = NULL;
+static int ntform_cols, *tform_cols = NULL;
 /*
 int
 which_cols(int *cols, int varno, xgobidata *xg) {
@@ -163,10 +162,12 @@ sort_compare (float *val1, float *val2)
 static void
 tform_response(xgobidata *xg, int *cols, int ncols)
 {
-  int j, n, gid;
+  int j, n;
 
+/*
 printf("%d %d %d %d\n",
 xg->vgroup_ids[0], xg->vgroup_ids[1],xg->vgroup_ids[2],xg->vgroup_ids[3]);
+*/
 
   if (xg->ncols_used > 2)
     update_sphered(xg, cols, ncols);
@@ -381,7 +382,7 @@ open_infer_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
   Widget close;
   Widget form0;
   Dimension width, height;
-  register int j, k;
+  register int j;
   Widget box_variables, box_varlabels, box_tforms;
   char str[64];
   Widget vport, vport_child;

@@ -39,12 +39,14 @@ long **cxi0, **cxi1, **cxif;
 static float tau_x, tau_y;
 static float tinc_x, tinc_y;
 static float corr_dv, corr_delta, corr_step;
+/*
 static Boolean xvar_to_fade = False;
 static int xvar_fading;
 static Boolean yvar_to_fade = False;
 static int yvar_fading;
+*/
 /* variables to determine whether to stop corr_proc */
-static int counting_to_stop;
+/*static int counting_to_stop;*/
 static Boolean ready_to_stop_now;
 
 static XSegment *corr_axes;
@@ -1766,7 +1768,6 @@ set_cxfrozen_var(xgobidata *xg, int varno)
 {
   int j, k, chosen_id;
   Boolean chosen, actv;
-  Boolean y_selected;
   int cvarno;
 
   chosen = False;
@@ -1834,7 +1835,6 @@ set_cyfrozen_var(xgobidata *xg, int varno)
 {
   int j, k, chosen_id;
   Boolean chosen, actv;
-  Boolean x_selected;
   int cvarno;
 
   chosen = False;

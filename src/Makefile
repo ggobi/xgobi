@@ -2,7 +2,7 @@
 # $XConsortium: imake.c /main/90 1996/11/13 14:43:23 lehors $
 
 # ----------------------------------------------------------------------
-# Makefile generated from "Imake.tmpl" and </tmp/IIf.a08AzI>
+# Makefile generated from "Imake.tmpl" and </tmp/IIf.a07qU4>
 # $TOG: Imake.tmpl /main/245 1997/05/20 10:05:47 kaleb $
 #
 
@@ -579,10 +579,10 @@ XGOBIOBJ = xgobi.o $(JOINTOBJ) $(RPCOBJ) $(CORBAOBJ)
 
 XGVISSRC = xgvis.c xgv_histogram.c xgv_qsort.c xgv_mds.c \
 	xgv_read_data.c xgv_help.c \
-	xgv_stressplot.c xgv_cbacks.c xgv_widgets.c $(JOINTSRC)
+	xgv_stressplot.c xgv_cbacks.c xgv_widgets.c xgv_anchor.c $(JOINTSRC)
 XGVISOBJ = xgvis.o xgv_histogram.o xgv_qsort.o xgv_mds.o \
 	xgv_read_data.o xgv_help.o \
-	xgv_stressplot.o xgv_cbacks.o xgv_widgets.o $(JOINTOBJ)
+	xgv_stressplot.o xgv_cbacks.o xgv_widgets.o xgv_anchor.o $(JOINTOBJ)
 
 all:: xgvis xgobi
 
