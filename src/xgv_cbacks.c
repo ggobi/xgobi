@@ -420,7 +420,8 @@ mds_rand_select_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 
   mds_rand_select_val = floor(slidepos*1.04 * 100.) / 100.;
   if(mds_rand_select_val > 1.0) mds_rand_select_val = 1.0;
-  sprintf(str, "Select'n prob: %3.2f%%", mds_rand_select_val);
+  /*sprintf(str, "Select'n prob: %3.2f%%", mds_rand_select_val);*/
+  sprintf(str, "Select'n prob: %d%%", (int)(100 * mds_rand_select_val));
   XtSetArg(args[0], XtNstring, str);
   XtSetValues(mds_rand_select_label, args, 1);
 
@@ -454,7 +455,8 @@ mds_perturb_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 
   mds_perturb_val = floor(slidepos*1.04 * 100.) / 100.;
   if(mds_perturb_val > 1.0) mds_perturb_val = 1.0;
-  sprintf(str, "Perturb: %3.2f%%", mds_perturb_val);
+  /*sprintf(str, "Perturb: %3.2f%%", mds_perturb_val);*/
+  sprintf(str, "Perturb: %d%%", (int)(100 * mds_perturb_val));
   XtSetArg(args[0], XtNstring, str);
   XtSetValues(mds_perturb_label, args, 1);
 

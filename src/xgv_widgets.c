@@ -930,7 +930,8 @@ make_xgvis_widgets()
     /* Random selection of distances -------------------------- */
     sprintf(str, "new ");
     width = XTextWidth(panel_data.Font, str, strlen(str))+2;
-    sprintf(str, "Select'n prob: %3.2f%%", mds_rand_select_val);
+    /*sprintf(str, "Select'n prob: %3.2f%%", mds_rand_select_val);*/
+    sprintf(str, "Select'n prob: %d%%", (int)(100 * mds_rand_select_val));
     mds_rand_select_label = XtVaCreateManagedWidget("Label",
        asciiTextWidgetClass, mdsPanel,
        XtNstring, (String) str,
@@ -968,7 +969,8 @@ make_xgvis_widgets()
     /* Random perturbation of configuration -------------------------- */
     sprintf(str, "new ");
     width = XTextWidth(panel_data.Font, str, strlen(str))+2;
-    sprintf(str, "Perturb: %3.2f%%", mds_perturb_val);
+    /*sprintf(str, "Perturb: %3.2f%%", mds_perturb_val);*/
+    sprintf(str, "Perturb: %d%%", (int)(100 * mds_perturb_val));
     mds_perturb_label = XtVaCreateManagedWidget("Label",
        asciiTextWidgetClass, mdsPanel,
        XtNstring, (String) str,
