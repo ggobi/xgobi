@@ -3,6 +3,8 @@ all: xgobi xgvis
 srcdir = @srcdir@
 VPATH = @srcdir@
 
+CPPFLAGS+= @DEFS@
+
 include Makeconf
 
 JOINTSRC = xgobi_init.c pipeline.c read_array.c \
