@@ -93,7 +93,7 @@ extern double set_distance_factor(void);
 extern void init_dissim(void);
 extern void draw_stress(void);
 extern void make_xgvis_widgets(void);
-extern void set_vgroups(xgobidata *);
+extern void set_vgroups(void);
 
 void
 copy_pos_to_raw(xgobidata *xg)
@@ -375,6 +375,7 @@ main(int argc, char *argv[])
  * a float data array for xgobi -- I can free it once xgobi
  * has been initialized.
 */
+
   fdata = (float **) XtMalloc((unsigned) pos.nrows * sizeof(float *));
   for (i=0; i<pos.nrows; i++) {
     fdata[i] = (float *) XtMalloc((unsigned) pos.ncols * sizeof(float));
@@ -431,7 +432,7 @@ Widget parent
     read_point_glyphs(glyphname, True, True, &xgobi);
     read_line_colors(lcolorname, True, True, &xgobi);
 
-    set_vgroups(&xgobi);
+    set_vgroups();
     update_lims(&xgobi);
     update_world(&xgobi);
     world_to_plane(&xgobi);

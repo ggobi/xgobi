@@ -36,7 +36,7 @@ XRectangle *thr_bars;
 Drawable thr_window;
 Pixmap thr_pixmap = (Pixmap) NULL;
 
-static double t_max, t_min;
+static double trans_dist_max, trans_dist_min;
 
 extern Dimension runPanelWidth, mdsPanelWidth;
 /*
@@ -192,16 +192,16 @@ draw_thr(void)
     thr_bars[thr_nbins-1].x+thr_bars[thr_nbins-1].width,
       thr_ymax);
 
-  /* xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx */
+  /* xxxxxxxxxx */
   sprintf(str, ".99");
   strwidth = XTextWidth(appdata.plotFont, str, strlen(str));
-  sprintf(str, "%2.2f", t_max);
+  sprintf(str, "%2.2f", trans_dist_max);
   XDrawString(display, thr_pixmap, copy_GC,
     thr_width - STR_HMARGIN - strwidth,
     FONTHEIGHT(appdata.plotFont),
     str,
     strlen(str));
-  sprintf(str, "%2.2f", t_min);
+  sprintf(str, "%2.2f", trans_dist_min);
   XDrawString(display, thr_pixmap, copy_GC,
     (int) STR_HMARGIN/2,
     FONTHEIGHT(appdata.plotFont),
@@ -251,8 +251,9 @@ set_threshold(void)
   dthresh_high = MIN(1, (double)(grip_pos[1] - thr_xmin) /
     (double) (thr_xmax - thr_xmin) );
 
-  mds_threshold_low = pow(dthresh_low, 1.0/mds_power);
-  mds_threshold_high = pow(dthresh_high, 1.0/mds_power);
+  mds_threshold_low  = dthresh_low  * dist_max;
+  mds_threshold_high = dthresh_high * dist_max;
+  printf("dthresh_low = %2.5f, dthresh_high = %2.5f \n", dthresh_low, dthresh_high);
 
 }
 
@@ -308,9 +309,9 @@ void
 reset_thr_bins(void)
 {
   int i;
-  double fac, t_d;
+  double fac, t_d, t_delta;
 
-  thr_bwidth = 5;  /* Try a fixed binwidth of 5 for a minute */
+  thr_bwidth = 5;  /* Try a fixed binwidth of 5 for now */
 
   /* width of plot divided by binwidth */
   thr_nbins = (int) ( (double)thr_pwidth / (double)thr_bwidth );
@@ -321,20 +322,23 @@ reset_thr_bins(void)
   thr_bins = (int *) XtRealloc((char *) thr_bins, thr_nbins * sizeof(int));
 
   /* map trans_dist[i] to [0,1] and sort into bins */
-  t_min = t_max = 0;
+  trans_dist_min = DBL_MAX; trans_dist_max = DBL_MIN;
   for(i=0; i<dist.nrows*dist.ncols; i++) {
     t_d = trans_dist[i];
     if (t_d != DBL_MAX) {
-      if(t_d > t_max) t_max = t_d;
-      if(t_d < t_min) t_min = t_d;
+      if(t_d > trans_dist_max) trans_dist_max = t_d;
+      if(t_d < trans_dist_min) trans_dist_min = t_d;
     }
   }
-  fac = (double)thr_nbins * 0.999999;  /* so rounding off results in strictly < thr_nbins */
+  /* in case trans_dist is constant and t_delta would be zero */
+  t_delta = MAX(trans_dist_max-trans_dist_min, 1E-100);
+  /* so rounding off results is strictly < thr_nbins */
+  fac = (double)thr_nbins * 0.999999;  
   for (i=0; i<thr_nbins; i++) thr_bins[i] = 0;
   for (i=0; i < dist.nrows*dist.ncols; i++) {
     t_d = trans_dist[i];
     if (t_d != DBL_MAX) {
-	thr_bins[(int) ((trans_dist[i]-t_min)/(t_max-t_min) * fac)]++;
+	thr_bins[(int) ((trans_dist[i]-trans_dist_min)/t_delta * fac)]++;
     }
   }
 }
@@ -370,8 +374,7 @@ set_pwidth(void)
 
 /* ARGSUSED */
 XtCallbackProc
-thr_resize_cback(Widget w, XtPointer client_data,
-  XtPointer callback_data)
+thr_resize_cback(Widget w, XtPointer client_data, XtPointer callback_data)
 {
   XtVaGetValues(thr_wksp,
     XtNwidth, &thr_width,
@@ -434,6 +437,7 @@ build_dissim_plotwin(Widget parent)
     XtNwidth, thr_width,
     XtNborderWidth, 0,
     NULL);
+  if (mono) set_mono(thr_label);
   
   thr_wksp = XtVaCreateManagedWidget("Thresholding",
     labelWidgetClass, thr_form,
@@ -468,8 +472,11 @@ init_dissim(void)
 
   initd = true;
 
-  mds_threshold_low = dthresh_low = 0;
-  mds_threshold_high = dthresh_high = 1;
+  dthresh_low = 0.;
+  dthresh_high = 1.;
+
+  mds_threshold_low = 0.;
+  mds_threshold_high = dist_max;
 
   reset_thr_bins();
   make_thr_barchart();
@@ -490,11 +497,6 @@ update_dissim_plot() {
   if (!initd) return;
 
   reset_thr_bins();
-
-  /* Given that mds_power has changed, recalculate the dthresh values */
-
-  dthresh_low = MAX(pow(mds_threshold_low, mds_power), 0.0);
-  dthresh_high = MIN(pow(mds_threshold_high, mds_power), 1.0);
 
   /* And given that the dthresh values have changed, reset grip_pos[] */
 

@@ -51,6 +51,7 @@ XGVIS_ int dist_type INIT(= 0) ;
 XGVIS_ enum {deflt, within, between, anchorscales, anchorfixed} mds_group_ind;
 XGVIS_ double mds_stepsize  INIT(= 0.02);
 XGVIS_ double mds_power  INIT(= 1.0);
+XGVIS_ double mds_isotonic_mix  INIT(= 1.0);
 XGVIS_ double mds_distpow INIT(= 1.0);
 XGVIS_ double mds_lnorm  INIT(= 2.0);
 XGVIS_ double mds_distpow_over_lnorm  INIT(= 0.5);
@@ -64,6 +65,7 @@ XGVIS_ double mds_threshold_high  INIT(= 0.0);
 XGVIS_ double mds_threshold_low  INIT(= 0.0);  /* what initial value? */
 XGVIS_ int    mds_dims INIT(= 3);
 XGVIS_ int    mds_freeze_var INIT(= 0);
+XGVIS_ Boolean *anchor_group INIT(= NULL);
 
 /* Used in scaling during each mds loop; set in reset_data */
 XGVIS_ double *config_dist   INIT(= NULL); /* spave vs time: store configuration distances to save recalculation */
@@ -77,6 +79,8 @@ XGVIS_ double *rand_sel      INIT(= NULL); /* random selection probabilities (on
 
 XGVIS_ int ndistances;
 XGVIS_ int num_active_dist;
+XGVIS_ double dist_max INIT (= 0.0);
+XGVIS_ double dist_min INIT (= 0.0);
 
 XGVIS_ double configuration_factor;
 
@@ -96,6 +100,8 @@ XGVIS_ struct array lines;
 XGVIS_ struct array *linesptr; /* points to lines, if present; else to edges */
 XGVIS_ struct array pos_orig;
 XGVIS_ struct array pos;
+XGVIS_ double *pos_mean INIT (=NULL);
+XGVIS_ double pos_scl INIT (=0.);
 XGVIS_ char **rowlab INIT(= NULL);	/* Row labels. */
 XGVIS_ char *xgv_basename;
 

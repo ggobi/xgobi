@@ -84,9 +84,9 @@ void
 get_center(void)
 {
   int i, k, n;
-  xgobidata *xg = (xgobidata *) &xgobi;
 
-  if (pos_mean == NULL) { pos_mean = (double *) XtMalloc(MAXDIMS * sizeof(double)); }
+  if (pos_mean == NULL)
+    pos_mean = (double *) XtMalloc(MAXDIMS * sizeof(double));
 
   n = 0;
   for(k=0; k<mds_dims; k++) { pos_mean[k] = 0.; }
@@ -103,63 +103,59 @@ void
 get_center_scale(void)
 {
   int n, i, k;
-  xgobidata *xg = (xgobidata *) &xgobi;
 
   get_center();
 
   n = 0;
   pos_scl = 0.;
   for(i=0; i<pos.nrows; i++)
-    if(point_status[i] == point_is_in || 
-       (mds_group_ind == anchorscales && point_status[i] == point_is_anchor)) {
+    if(point_status[i] =! point_is_out) {
       for(k=0; k<mds_dims; k++) 
-	pos_scl += fabs(pos.data[i][k] - pos_mean[k]);
+        pos_scl += ((pos.data[i][k] - pos_mean[k]) *
+                    (pos.data[i][k] - pos_mean[k]));
       n++;
     }
-  pos_scl = pos_scl/n/mds_dims;
+  pos_scl = sqrt(pos_scl/n/mds_dims);
 }
 
 void
-center_data(void) 
+center_pos(void) 
 {
   int i, k;
 
   get_center();
 
   for (i=0; i<pos.nrows; i++)
-    if(point_status[i] == point_is_in || 
-       (mds_group_ind==anchorscales && point_status[i] == point_is_anchor))
+    if(point_status[i] != point_is_out)
       for (k=0; k<mds_dims; k++)
-	pos.data[i][k] -= pos_mean[k];
+        pos.data[i][k] -= pos_mean[k];
 }
 
 /* restore configuration to old scale */
 void
-scale_data(void) 
+scale_pos(void) 
 {
   int i, k;
 
   get_center_scale();
 
   for (i=0; i<pos.nrows; i++)
-    if(point_status[i] == point_is_in || 
-       (mds_group_ind==anchorscales && point_status[i] == point_is_anchor))
+    if(point_status[i] != point_is_out)
       for (k=0; k<mds_dims; k++)
-	pos.data[i][k] = (pos.data[i][k] - pos_mean[k])/pos_scl + pos_mean[k];
+        pos.data[i][k] = (pos.data[i][k] - pos_mean[k])/pos_scl + pos_mean[k];
 }
 
 void
-center_scale_data(void) 
+center_scale_pos(void) 
 {
   int i, k;
 
   get_center_scale();
 
   for (i=0; i<pos.nrows; i++)
-    if(point_status[i] == point_is_in || 
-       (mds_group_ind==anchorscales && point_status[i] == point_is_anchor))
+    if(point_status[i] != point_is_out)
       for (k=0; k<mds_dims; k++)
-	pos.data[i][k] = (pos.data[i][k] - pos_mean[k])/pos_scl;
+        pos.data[i][k] = (pos.data[i][k] - pos_mean[k])/pos_scl;
 }
 
 /* end centering and sizing routines */
@@ -347,9 +343,9 @@ int realCompare(const void* aPtr, const void* bPtr)
 void
 isotonic_transform()
 {
-  int i, j, ii, ij, n;
-  double tmp, tmp_dist, tmp_distsum, tmp_weightsum, this_weight,
-    t_d_i, t_d_ii, tmp_distmax, tmp_distmin, tmp_distmean, tmp_delta;
+  int i, j, ii, ij;
+  double tmp_dist, tmp_distsum, tmp_weightsum, this_weight,
+    t_d_i, t_d_ii;
   Boolean finished;
   static int prev_nonmetric_active_dist = 0;
 
@@ -482,7 +478,7 @@ isotonic_transform()
 } /* end isotonic_transform() */
 
 
-/* ---------------------------------------------------------------- /*
+/* ---------------------------------------------------------------- */
 /*
  * Perform one loop of the iterative mds function.
  *
@@ -492,19 +488,16 @@ isotonic_transform()
 void
 mds_once(Boolean doit)
 {
-  static int i, j, k, ii, n;
+  static int i, j, k, n;
 
   static Boolean gradient_p = True;
   static struct array gradient;
   
-  static int prev_active_dist = -1,  prev_nonmetric_active_dist = -1;
+  static int prev_active_dist = -1;
 
-  static Boolean finished;
-
-  static double dist_config, dist_data, dist_trans, resid, weight;
-  static double step_mag, step_dir, gsum, psum, gfactor;
-  static double tmp, tmp_dist, tmp_sum, tmp_weight, tmp_mean, tmp_max, t_d_i, t_d_ii;
-  static double tmp_rand;
+  static double dist_config, dist_trans, resid, weight;
+  static double step_mag, gsum, psum, gfactor;
+  static double tmp;
 
   /* used in macros SAMEGLYPH and ACHORED  */
   xgobidata *xg = (xgobidata *) &xgobi;
@@ -538,17 +531,21 @@ mds_once(Boolean doit)
   /* in */
   for(i=0; i<xg->nrows_in_plot; i++) { 
     n = xg->rows_in_plot[i]; 
-    if(!xg->erased[n]) point_status[n] = point_is_in; }
-  /* anchors of either kind */  
+    if(!xg->erased[n]) point_status[n] = point_is_in;
+  }
+  /* excluded points and anchors of either kind */  
   if (xg->ncols == xg->ncols_used) {
     for (i=0; i<pos.nrows; i++)
       if (xg->clusv[(int)GROUPID(i)].excluded == 1) 
-	point_status[i] = point_is_out;
-    if(anchored != NULL) {
+        point_status[i] = point_is_out;
+    if(anchor_group != NULL) {
       if (mds_group_ind == anchorfixed || mds_group_ind == anchorscales)
-	for (i=0; i<pos.nrows; i++)
-	  if (point_status[i] != point_is_out && anchored[(int) xg->raw_data[(i)][xg->ncols-1]])
-	    point_status[i] = point_is_anchor;
+        for (i=0; i<pos.nrows; i++)
+          if (point_status[i] != point_is_out &&
+              anchor_group[(int) xg->raw_data[(i)][xg->ncols-1]])
+          {
+            point_status[i] = point_is_anchor;
+          }
     }
   }
   /* dragged by mouse */
@@ -589,6 +586,10 @@ mds_once(Boolean doit)
 
       /* these points do not contribute to the gradient */
       if (point_status[j] == point_is_out) continue;
+      if ((mds_group_ind == anchorscales || mds_group_ind == anchorfixed) && 
+          point_status[j] != point_is_anchor &&
+          point_status[j] != point_is_dragged)
+            continue;
 
       /* if the target distance is missing, skip */
       if (dist.data[i][j] == DBL_MAX) continue;
@@ -761,17 +762,17 @@ mds_once(Boolean doit)
 
     /* add the gradient matrix to the position matrix and drag points */
     for (i=0; i<pos.nrows; i++) {
-      if (point_status[i] == point_is_in || 
-	  (mds_group_ind == anchorscales && point_status[i] == point_is_anchor)) 
-	for (k=mds_freeze_var; k<mds_dims; k++)
-	  pos.data[i][k] += (gfactor * gradient.data[i][k]);
-      if (point_status[i] == point_is_dragged) 
-	for (k=0; k < mds_dims; k++) 
-	  pos.data[i][k] = xg->raw_data[i][k] ;
+      if(point_status[i] != point_is_dragged) {
+        for (k=mds_freeze_var; k<mds_dims; k++)
+          pos.data[i][k] += (gfactor * gradient.data[i][k]);
+      } else {
+        for (k=0; k < mds_dims; k++) 
+          pos.data[i][k] = xg->raw_data[i][k] ;
+      }
     }
 
     /* experiment: normalize point cloud after using simplified gradient */
-    scale_data();
+    center_scale_pos();
 
   } /*   if (doit && num_active_dist > 0) { */
 

@@ -25,12 +25,10 @@ extern XtCallbackProc PopUpThresholdPanel();
 extern XtCallbackProc reset_cback();
 extern XtCallbackProc scramble_cback();
 extern XtCallbackProc center_cback();
-extern XtCallbackProc symmetrize_cback();
-extern XtCallbackProc raw_cback();
 extern XtCallbackProc xgvis_help_MDS_background_cback();
 extern XtCallbackProc xgvis_help_controls_cback();
 extern XtCallbackProc xgvis_help_kruskal_shepard_cback();
-extern XtCallbackProc xgvis_help_torgersen_gower_cback();
+extern XtCallbackProc xgvis_help_torgerson_gower_cback();
 extern XtCallbackProc xgvis_help_input_file_formats_cback();
 extern XtCallbackProc run_cback();
 extern XtCallbackProc Quit();
@@ -51,7 +49,7 @@ extern XtCallbackProc mds_dimsright_cback();
 extern XtCallbackProc save_distance_matrix();
 extern XtCallbackProc mds_casewise_cback();
 extern XtCallbackProc mds_launch_cback();
-extern XtCallbackProc open_exclusion_popup_cback();
+extern XtCallbackProc xgv_open_anchor_popup_cback();
 
 
 extern void build_stress_plotwin(Widget, Widget, Widget);
@@ -102,171 +100,94 @@ Widget run_cmd[6];
 
 /* MDS with groups */
 #define NGROUPBTNS 5
-static char *group_menu_str = "MDS with";
 Widget group_menu_cmd, group_menu_btn[NGROUPBTNS] ;
-Widget group_menu_box, group_menu_lab, group_menu_labx, group_menu, group_menu_popup, group_menu_anchor_symbol;
-static char *group_menu_btn_label[] = {
-  "Ignore groups (deflt)",
-  "Dists within groups",
-  "Dists between groups",
-  "Dists from&in anchor",
-  "Dists from anchor"
+Widget group_menu_box, group_menu_lab, group_menu, group_menu_popup;
+char *group_menu_btn_label[] = {
+  "scale all",
+  "within groups",
+  "between groups",
+  "anchors scale",
+  "anchors fixed"
 };
 
 /* MDS with frozen variables */
 #define NFREEZEBTNS 3
 Widget freeze_menu_cmd, freeze_menu_btn[NFREEZEBTNS] ;
-Widget freeze_menu_box, freeze_menu_lab, freeze_menu, freeze_menu_popup, freeze_menu_anchor_symbol;
+Widget freeze_menu_box, freeze_menu_lab, freeze_menu, freeze_menu_popup;
 static char *freeze_menu_btn_label[] = {
-  "No var frozen",
+  "No vars frozen",
   "Var 1 frozen",
   "Vars 1,2 frozen"
 };
 
 /* help bitmaps */
 #define NHELPBTNS 5
-static char *help_menu_str = "Help...";
 Widget help_menu_cmd, help_menu, help_menu_btn[NHELPBTNS];
 static char *help_menu_btn_label[] = {
   "MDS Background",
   "MDS Controls of XGvis",
   "Formula for Kruskal-Shepard Distance Scaling",
-  "Formula for Torgersen-Gower Dot-Product Scaling (classic MDS)",
+  "Formula for Torgerson-Gower Dot-Product Scaling (classic MDS)",
   "Formats of XGvis Input Files"
 };
 
 Dimension runPanelWidth, mdsPanelWidth;
 
-/* draw the anchor symbol for MDS with groups */
-void
-draw_anchor_symbol(xgobidata *xg, int k)
-{
-  /*
-   * Draw the current glyph in the current color in the
-   * glyph_wksp.  If no glyph is chosen, draw a border.
-   */
-  Drawable gwin;
-  icoords xypos[1];
-  unsigned long color;
-  int size, type;
-  
-  gwin = XtWindow(group_menu_anchor_symbol);
-  color = xg->color_now[k];
-  type = xg->glyph_now[k].type;
-  size = xg->glyph_now[k].size;
-
-  /* Clear it */
-  XFillRectangle(display, gwin, clear_GC, 0, 0, 20, 20);
-
-/*
- * The center is at 11, 11 ...   (How that can be?)
-*/
-  xypos[0].x = 11;
-  xypos[0].y = 11;
-
-  /* Set the foreground color */
-  if (!mono) {
-    XSetForeground(display, copy_GC,
-      (color == plotcolors.bg) ? plotcolors.fg :
-        color);
-  }
-
-  if (type == PLUS_GLYPH) {
-    XSegment segv[2];
-    build_plus(xypos, 0, segv, 0, size);
-    XDrawSegments(display, gwin, copy_GC,
-      segv, 2);
-  }
-  else if (type == X_GLYPH) {
-    XSegment segv[2];
-    build_x(xypos, 0, segv, 0, size);
-    XDrawSegments(display, gwin, copy_GC,
-      segv, 2);
-  }
-  else if (type == OPEN_RECTANGLE_GLYPH) {
-    XRectangle rectv[1];
-    build_rect(xypos, 0, rectv, 0, size);
-    XDrawRectangles(display, gwin, copy_GC, rectv, 1);
-  }
-  else if (type == FILLED_RECTANGLE_GLYPH) {
-    XRectangle rectv[1];
-    build_rect(xypos, 0, rectv, 0, size);
-    XFillRectangles(display, gwin, copy_GC, rectv, 1);
-  }
-  else if (type == OPEN_CIRCLE_GLYPH) {
-    XArc circ[1];
-    build_circle(xypos, 0, circ, 0, size);
-    XDrawArcs(display, gwin, copy_GC, circ, 1);
-  }
-  else if (type == FILLED_CIRCLE_GLYPH) {
-    XArc circ[1];
-    build_circle(xypos, 0, circ, 0, size);
-    XFillArcs(display, gwin, copy_GC, circ, 1);
-  }
-  else if (type == POINT_GLYPH) {
-    XDrawPoint(display, gwin, copy_GC, xypos[0].x, xypos[0].y);
-  }
-
-  if (!mono) {
-    if (color == plotcolors.bg)
-      XDrawLine(display, gwin, copy_GC, 0, 0, 22, 22);
-  }
-
-  XFlush(display);
-  XSync(display, False);
-}
-
 
 /* ARGSUSED */
-static XtCallbackProc
+XtCallbackProc
 set_mds_group_cback(w, cldata, cdata)
   Widget w;
   XtPointer cldata, cdata;
 {
   int k, btn;
+  xgobidata *xg = (xgobidata *) &xgobi;
+
   for (k=0; k<NGROUPBTNS; k++)
     if (group_menu_btn[k] == w) {
       btn = k;
       break;
     }
+
   XtVaSetValues(group_menu_cmd,
     XtNlabel, group_menu_btn_label[btn],
     NULL);
 
   switch (btn) {
     case 0:
-      mds_group_ind = deflt;
-      XtVaSetValues(xgobi.movepts_mouse,
-        XtNlabel, "L: Move point/group/all ", NULL);
-    break;
+      {
+	mds_group_ind = deflt;
+	break;
+      }
     case 1:
-      mds_group_ind = within;
-      XtVaSetValues(xgobi.movepts_mouse,
-        XtNlabel, "L: Move point/group/all ", NULL);
-    break;
+      {
+	mds_group_ind = within;
+	break;
+      }
     case 2:
-      mds_group_ind = between;
-      XtVaSetValues(xgobi.movepts_mouse,
-        XtNlabel, "L: Move point/group/all ", NULL);
-    break;
+      {
+	mds_group_ind = between;
+	break;
+      }
     case 3:
-      mds_group_ind = anchorscales;
-      XtVaSetValues(xgobi.movepts_mouse,
-        XtNlabel, "L: Move;  M: MDS anchor ", NULL);
-      draw_anchor_symbol(&xgobi, point_midbutton);
-    break;
+      {
+	mds_group_ind = anchorscales;
+	xgv_open_anchor_popup_cback(w, xg, cdata);
+	break;
+      }
     case 4:
-      mds_group_ind = anchorfixed;
-      XtVaSetValues(xgobi.movepts_mouse,
-        XtNlabel, "L: Move;  M: MDS anchor ", NULL);
-      draw_anchor_symbol(&xgobi, point_midbutton);
-    break;
+      {
+	mds_group_ind = anchorfixed;
+	xgv_open_anchor_popup_cback(w, xg, cdata);
+	break;
+      }
     default:
-      mds_group_ind = deflt;
-      XtVaSetValues(xgobi.movepts_mouse,
-        XtNlabel, "L: Move point/group/all ", NULL);
+      {
+	mds_group_ind = deflt;
+      }
   }
 }
+
 
 /* ARGSUSED */
 XtCallbackProc
@@ -293,13 +214,22 @@ static Widget metric_cmd[2], metricPanel;
 /* ARGSUSED */
 XtCallbackProc
 setMetricCback(Widget w, XtPointer cd, int *which) {
+  Arg args[1];
+  char str[30];
 
   metric_nonmetric = METRIC;
   
   setToggleBitmap(w, True);
   setToggleBitmap(metric_cmd[1], False);
+  if(KruskalShepard_classic == KRUSKALSHEPARD) {
+    sprintf(str, "Data Power (D^p): %3.1f ",  mds_power);
+  } else {
+    sprintf(str, "Data Power (D^2p): %3.1f ",  mds_power);
+  }
 
-  XtVaSetValues(mds_power_sbar, XtNsensitive, True, NULL);
+  XtSetArg(args[0], XtNstring, str);
+  XtSetValues(mds_power_label, args, 1);
+  XawScrollbarSetThumb(mds_power_sbar, mds_power/6.0, -1.);
 
   mds_once(False);
   update_dissim_plot();
@@ -308,23 +238,31 @@ setMetricCback(Widget w, XtPointer cd, int *which) {
 /* ARGSUSED */
 XtCallbackProc
 setNonmetricCback(Widget w, XtPointer cd, int *which) {
+  Arg args[1];
+  char str[30];
 
   metric_nonmetric = NONMETRIC;
 
   setToggleBitmap(w, True);
   setToggleBitmap(metric_cmd[0], False);
 
-  XtVaSetValues(mds_power_sbar, XtNsensitive, False, NULL);
+  sprintf(str, "Isotonic(D): %d%% ", (int) (mds_isotonic_mix*100));
+  XtSetArg(args[0], XtNstring, str);
+  XtSetValues(mds_power_label, args, 1);
+  XawScrollbarSetThumb(mds_power_sbar, mds_isotonic_mix/1.04, -1.);
 
   mds_once(False);
   update_dissim_plot();
+
 }
 
 static Widget KruskalShepard_cmd[2], KruskalShepardPanel;
 /* ARGSUSED */
 XtCallbackProc
 setKruskalShepardCback(Widget w, XtPointer cd, int *which) {
-  int i, j;
+  Arg args[1];
+  char str[30];
+  extern Widget mds_power_label;
 
   KruskalShepard_classic = KRUSKALSHEPARD;
   
@@ -334,6 +272,14 @@ setKruskalShepardCback(Widget w, XtPointer cd, int *which) {
   XtVaSetValues(mds_distpow_sbar, XtNsensitive, True, NULL);
   XtVaSetValues(mds_lnorm_sbar, XtNsensitive, True, NULL);
 
+  if(metric_nonmetric == METRIC) {
+    sprintf(str, "Data Power (D^p): %3.1f ",  mds_power);
+  } else {
+    sprintf(str, "Isotonic(D): %d%% ", (int) (mds_isotonic_mix*100));
+  }
+  XtSetArg(args[0], XtNstring, str);
+  XtSetValues(mds_power_label, args, 1);
+
   mds_once(False);
   update_dissim_plot();
 }
@@ -341,7 +287,9 @@ setKruskalShepardCback(Widget w, XtPointer cd, int *which) {
 /* ARGSUSED */
 XtCallbackProc
 setClassicCback(Widget w, XtPointer cd, int *which) {
-  int i, j, n;
+  Arg args[1];
+  char str[30];
+  extern Widget mds_power_label;
 
   KruskalShepard_classic = CLASSIC;
 
@@ -351,19 +299,16 @@ setClassicCback(Widget w, XtPointer cd, int *which) {
   XtVaSetValues(mds_distpow_sbar, XtNsensitive, False, NULL);
   XtVaSetValues(mds_lnorm_sbar, XtNsensitive, False, NULL);
 
-  /*
-  distances2innerproducts();
-  */
+  if(metric_nonmetric == METRIC) {
+    sprintf(str, "Data Power (D^2p): %3.1f ",  mds_power);
+  } else {
+    sprintf(str, "Isotonic(D): %d%% ", (int) (mds_isotonic_mix*100));
+  }
+  XtSetArg(args[0], XtNstring, str);
+  XtSetValues(mds_power_label, args, 1);
 
   mds_once(False);
   update_dissim_plot();
-}
-
-/* ARGSUSED */
-XtCallbackProc
-mds_open_exclusion_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
-{
-  open_exclusion_popup_cback (w, xg, callback_data);
 }
 
 
@@ -373,13 +318,12 @@ make_xgvis_widgets()
 {
   char str[30];
   static Widget file_menu_cmd, file_menu, file_menu_btn[2];
-  int i, j, k;
+  int j, k;
   static char *file_menu_names[] = {
     "Save distance matrix ...",
     "Exit"
   };
-  Widget mds_launch_panel;
-  Widget mds_launch_cmd, mds_launch_label;
+  Widget mds_launch_cmd;
   Dimension width;
 
   form0 = XtVaCreateManagedWidget("Form0",
@@ -387,6 +331,7 @@ make_xgvis_widgets()
     /*XtNfont, panel_data.Font,*/
     XtNfont, appdata.font,
     NULL);
+  if (mono) set_mono(form0);
 
 /**************************************************************
  * Define Run Panel, to contain the reset and run buttons. 
@@ -402,11 +347,12 @@ make_xgvis_widgets()
     XtNright, (XtEdgeType) XtChainLeft,
     XtNbottom, (XtEdgeType) XtChainTop,
     NULL);
+  if (mono) set_mono(runPanel);
 
 /* File menu */
 
-  sprintf(str, "Shepard Plot  ");
-  runPanelWidth = XTextWidth(panel_data.Font, str, strlen(str));
+  sprintf(str, " Vars 1,2 frozen  ");
+  runPanelWidth = XTextWidth(panel_data.Font, str, strlen(str)) + 12;
 
   file_menu_cmd = XtVaCreateManagedWidget("Command",
     menuButtonWidgetClass, runPanel,
@@ -464,16 +410,19 @@ make_xgvis_widgets()
     XtNbottom, (XtEdgeType) XtChainTop,
     XtNfromVert,   RUN,
     NULL);
+  if (mono) set_mono(metricPanel);
   metric_cmd[0] = XtVaCreateWidget("XGVToggle",
     toggleWidgetClass, metricPanel,
     XtNstate, (Boolean) True,
     XtNlabel, (String) "Metric ",
     NULL);
+  if (mono) set_mono(metric_cmd[0]);
   metric_cmd[1] = XtVaCreateWidget("XGVToggle",
     toggleWidgetClass, metricPanel,
     XtNlabel, (String) "NonMetr",
     XtNradioGroup, metric_cmd[0],
     NULL);
+  if (mono) set_mono(metric_cmd[1]);
   XtManageChildren(metric_cmd, 2);
 
   setToggleBitmap(metric_cmd[0], True);
@@ -495,16 +444,19 @@ make_xgvis_widgets()
     XtNbottom, (XtEdgeType) XtChainTop,
     XtNfromVert,   metricPanel,
     NULL);
+  if (mono) set_mono(KruskalShepardPanel);
   KruskalShepard_cmd[0] = XtVaCreateWidget("XGVToggle",
     toggleWidgetClass, KruskalShepardPanel,
     XtNstate, (Boolean) True,
     XtNlabel, (String) "Krsk/Sh",
     NULL);
+  if (mono) set_mono(KruskalShepard_cmd[0]);
   KruskalShepard_cmd[1] = XtVaCreateWidget("XGVToggle",
     toggleWidgetClass, KruskalShepardPanel,
     XtNlabel, (String) "Classic",
     XtNradioGroup, KruskalShepard_cmd[0],
     NULL);
+  if (mono) set_mono(KruskalShepard_cmd[1]);
   XtManageChildren(KruskalShepard_cmd, 2);
 
   setToggleBitmap(KruskalShepard_cmd[0], True);
@@ -545,7 +497,7 @@ make_xgvis_widgets()
 /* center and scale */
   CENTER = XtVaCreateManagedWidget("Command",
     commandWidgetClass, runPanel,
-    XtNlabel, (String) "Center                              ",
+    XtNlabel, (String) "Center/Scale                        ",
     XtNfromVert,     RESET,
     XtNvertDistance, 2,
     XtNwidth, (Dimension) runPanelWidth,
@@ -553,6 +505,7 @@ make_xgvis_widgets()
   if (mono) set_mono(CENTER);
   XtAddCallback(CENTER, XtNcallback,
     (XtCallbackProc) center_cback, (XtPointer) NULL);
+
 
 /* freeze variables */
    freeze_menu_cmd = XtVaCreateManagedWidget("MenuButton",
@@ -564,29 +517,30 @@ make_xgvis_widgets()
       XtNvertDistance, 8,
       XtNresize, False,
       NULL);
-    if (mono) set_mono(freeze_menu_cmd);
+   if (mono) set_mono(freeze_menu_cmd);
 
-    freeze_menu = XtVaCreatePopupShell("Menu",
+   freeze_menu = XtVaCreatePopupShell("Menu",
       simpleMenuWidgetClass, freeze_menu_cmd,
       NULL);
-    if (mono) set_mono(freeze_menu);
+   if (mono) set_mono(freeze_menu);
 
-    for(k=0; k<NFREEZEBTNS; k++) {
+   for(k=0; k<NFREEZEBTNS; k++) {
       freeze_menu_btn[k] = XtVaCreateWidget("Command",
         smeBSBObjectClass, freeze_menu,
         XtNlabel, freeze_menu_btn_label[k],
         NULL);
       if (mono) set_mono(freeze_menu_btn[k]);
-    }
-    XtManageChildren(freeze_menu_btn, (Cardinal) NFREEZEBTNS);
+   }
+   XtManageChildren(freeze_menu_btn, (Cardinal) NFREEZEBTNS);
 
-    XtAddCallback(freeze_menu_btn[0],  XtNcallback,
-       (XtCallbackProc) freeze_0_cback, (XtPointer) NULL);
-    XtAddCallback(freeze_menu_btn[1],  XtNcallback,
-       (XtCallbackProc) freeze_1_cback, (XtPointer) NULL);
-    XtAddCallback(freeze_menu_btn[2],  XtNcallback,
-       (XtCallbackProc) freeze_2_cback, (XtPointer) NULL);
+   XtAddCallback(freeze_menu_btn[0],  XtNcallback,
+      (XtCallbackProc) freeze_0_cback, (XtPointer) NULL);
+   XtAddCallback(freeze_menu_btn[1],  XtNcallback,
+      (XtCallbackProc) freeze_1_cback, (XtPointer) NULL);
+   XtAddCallback(freeze_menu_btn[2],  XtNcallback,
+      (XtCallbackProc) freeze_2_cback, (XtPointer) NULL);
     
+
     /* Shepard diagram: launch xgobi to contain diagnostic data ----------------------------- */
     mds_launch_cmd = XtVaCreateManagedWidget("Command",
       commandWidgetClass, runPanel,
@@ -642,7 +596,7 @@ make_xgvis_widgets()
   XtAddCallback(help_menu_btn[2], XtNcallback,
     (XtCallbackProc) xgvis_help_kruskal_shepard_cback, (XtPointer) NULL);
   XtAddCallback(help_menu_btn[3], XtNcallback,
-    (XtCallbackProc) xgvis_help_torgersen_gower_cback, (XtPointer) NULL);
+    (XtCallbackProc) xgvis_help_torgerson_gower_cback, (XtPointer) NULL);
   XtAddCallback(help_menu_btn[4], XtNcallback,
     (XtCallbackProc) xgvis_help_input_file_formats_cback, (XtPointer) NULL);
 
@@ -708,7 +662,7 @@ make_xgvis_widgets()
       (XtEventHandler) mds_dimsright_cback, (XtPointer) NULL);
 
     /* first define width of label fields: this is the widest */
-    sprintf(str, "Minkowski n'rm (m): %3.2f", 2.9);
+    sprintf(str, "Select'n prob: 100X    new");
     mdsPanelWidth = XTextWidth(panel_data.Font, str, strlen(str));
 
     /* Stepsize label and scrollbar for mds method ------------------------ */
@@ -732,8 +686,8 @@ make_xgvis_widgets()
         NULL);
     if (mono) set_mono(mds_stepsize_sbar);
     XawScrollbarSetThumb(mds_stepsize_sbar,
-     (float) pow((double)(mds_stepsize / 0.2), .5), 
-     -1.); /* inverse formula for slider -> step */
+			 (float) pow((double)(mds_stepsize / 0.2), .5), 
+			 -1.); /* inverse formula for slider -> step */
     XtAddCallback(mds_stepsize_sbar, XtNjumpProc,
         (XtCallbackProc) mds_stepsize_cback, (XtPointer) NULL);
 
@@ -807,8 +761,8 @@ make_xgvis_widgets()
     if (mono) set_mono(mds_lnorm_sbar);
 
     XawScrollbarSetThumb(mds_lnorm_sbar, 
-     (mds_lnorm-1.0)/5.0, 
-     -1.); /* Range: 1:6 */
+			 (mds_lnorm-1.0)/5.0, 
+			 -1.); /* Range: 1:6 */
     XtAddCallback(mds_lnorm_sbar, XtNjumpProc,
         (XtCallbackProc) mds_lnorm_cback, (XtPointer) NULL);
 
@@ -838,8 +792,7 @@ make_xgvis_widgets()
       (XtCallbackProc) mds_weightpow_cback, (XtPointer) NULL);
 
     /* Interpolation within-between groups -------------------------- */
-    sprintf(str, "Withn:%3.2f  Betwn:%3.2f",
-      (2. - mds_within_between), mds_within_between);
+    sprintf(str, "Withn:%3.2f  Betwn:%3.2f", (2. - mds_within_between), mds_within_between);
 
     mds_within_between_label = XtVaCreateManagedWidget("Label",
         asciiTextWidgetClass, mdsPanel,
@@ -863,14 +816,13 @@ make_xgvis_widgets()
     XtAddCallback(mds_within_between_sbar, XtNjumpProc,
       (XtCallbackProc) mds_within_between_cback, (XtPointer) NULL);
 
-    /* Use of groups: all dists, within grps, between grps, anchored&within, anchored -------- */
-    mds_group_ind = deflt;
+    /* Use of groups: all dists, within grps, between grps -------- */
 
     group_menu_lab = XtVaCreateManagedWidget("Label",
       asciiTextWidgetClass, mdsPanel,
       XtNdisplayCaret, (Boolean) False,
       XtNfromVert, (Widget) mds_within_between_sbar,
-      XtNwidth, (Dimension) mdsPanelWidth-96,
+      XtNwidth, (Dimension) mdsPanelWidth-72,
       XtNstring, (String) "MDS with",
       NULL);
     if (mono) set_mono(group_menu_lab);
@@ -881,23 +833,13 @@ make_xgvis_widgets()
       XtNhorizDistance, 0,
       XtNlabel, (String) "Groups",
       XtNfromVert, (Widget)  mds_within_between_sbar,
-      XtNwidth, (Dimension) 71,
+      XtNwidth, (Dimension) 70,
       NULL);
    if (mono) set_mono(group_menu_popup);
    XtAddCallback(group_menu_popup, XtNcallback,
-     (XtCallbackProc) mds_open_exclusion_popup_cback, (XtPointer) &xgobi);
+     (XtCallbackProc) xgv_open_anchor_popup_cback, (XtPointer) &xgobi);
 
-   group_menu_anchor_symbol = XtVaCreateManagedWidget("HideOrExclude",
-      drawingAreaWidgetClass, mdsPanel,
-      XtNresizable, (Boolean) False,
-      XtNfromHoriz, group_menu_popup,
-      XtNhorizDistance, 0,
-      XtNfromVert, (Widget) mds_within_between_sbar,
-      XtNwidth,  21,
-      XtNheight, 21,
-      NULL);
-   if (mono) set_mono(group_menu_anchor_symbol);
-
+   mds_group_ind = deflt;
    group_menu_cmd = XtVaCreateManagedWidget("MenuButton",
       menuButtonWidgetClass, mdsPanel,
       XtNlabel, (String) group_menu_btn_label[0],
@@ -926,12 +868,11 @@ make_xgvis_widgets()
     for (k=0; k<NGROUPBTNS; k++)
       XtAddCallback(group_menu_btn[k],  XtNcallback,
         (XtCallbackProc) set_mds_group_cback, (XtPointer) NULL);
-    
+
     /* Random selection of distances -------------------------- */
     sprintf(str, "new ");
     width = XTextWidth(panel_data.Font, str, strlen(str))+2;
-    /*sprintf(str, "Select'n prob: %3.2f%%", mds_rand_select_val);*/
-    sprintf(str, "Select'n prob: %d%%", (int)(100 * mds_rand_select_val));
+    sprintf(str, "Select'n prob: %d%%", (int) (mds_rand_select_val*100));
     mds_rand_select_label = XtVaCreateManagedWidget("Label",
        asciiTextWidgetClass, mdsPanel,
        XtNstring, (String) str,
@@ -939,14 +880,14 @@ make_xgvis_widgets()
        XtNfromVert, (Widget) group_menu_cmd,
        XtNwidth, mdsPanelWidth-width-2,
        NULL);
-    if (mono) set_mono(mds_rand_select_label);
+       if (mono) set_mono(mds_rand_select_label);
 
     mds_rand_select_label_new = XtVaCreateManagedWidget("Command",
         commandWidgetClass, mdsPanel,
         XtNfromHoriz, mds_rand_select_label,
         XtNhorizDistance, 0,
         XtNlabel, (String) "new",
-        XtNfromVert, (Widget)  group_menu_cmd,
+	XtNfromVert, (Widget)  group_menu_cmd,
         XtNwidth, (Dimension) width,
         NULL);
     if (mono) set_mono(mds_rand_select_label_new);
@@ -969,8 +910,7 @@ make_xgvis_widgets()
     /* Random perturbation of configuration -------------------------- */
     sprintf(str, "new ");
     width = XTextWidth(panel_data.Font, str, strlen(str))+2;
-    /*sprintf(str, "Perturb: %3.2f%%", mds_perturb_val);*/
-    sprintf(str, "Perturb: %d%%", (int)(100 * mds_perturb_val));
+    sprintf(str, "Perturb: %d%%", (int) (mds_perturb_val*100));
     mds_perturb_label = XtVaCreateManagedWidget("Label",
        asciiTextWidgetClass, mdsPanel,
        XtNstring, (String) str,
@@ -1163,3 +1103,15 @@ update_shepard_labels(int maxn) {
   sprintf(strtmp, "%d dists", maxn);
   XtVaSetValues(mds_launch_nlbl, XtNlabel, strtmp, NULL);
 }
+
+
+
+
+
+
+
+
+
+
+
+

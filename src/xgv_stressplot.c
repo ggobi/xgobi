@@ -175,6 +175,7 @@ build_stress_plotwin(Widget parent, Widget href, Widget vref)
     XtNfromHoriz, href,
     XtNfromVert, vref,
     NULL);
+  if (mono) set_mono(stress_form);
 
   str_width = runPanelWidth + mdsPanelWidth + 15;
 
@@ -188,6 +189,7 @@ build_stress_plotwin(Widget parent, Widget href, Widget vref)
     XtNwidth, str_width,
     XtNborderWidth, 0,
     NULL); 
+  if (mono) set_mono(str_label);
 
   str_wksp = XtVaCreateManagedWidget("Stress",
     labelWidgetClass, stress_form,

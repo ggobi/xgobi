@@ -12,7 +12,7 @@
 
 /* bitmaps: */
 #include "../bitmaps/stress_kruskal_shepard.xbm"
-#include "../bitmaps/stress_torgersen_gower.xbm"
+#include "../bitmaps/strain_torgerson_gower.xbm"
 
 
 /* ARGSUSED */
@@ -24,8 +24,7 @@ xgvis_help_done_cback(Widget w, XtPointer client_data, XtPointer callback_data)
 
 /* ARGSUSED */
 XtCallbackProc
-xgvis_help_MDS_background_cback(Widget w, XtPointer client_data,
-  XtPointer callback_data)
+xgvis_help_MDS_background_cback(Widget w, XtPointer client_data, XtPointer callback_data)
 {
   char fname[100];
   char message[MSGLENGTH];
@@ -77,10 +76,7 @@ xgvis_help_MDS_background_cback(Widget w, XtPointer client_data,
     return((XtCallbackProc) 0);
   }
   else {
-    Widget hpopup, hframe, /*hform, hfunc,*/ htext, hdone;
-    /*Screen *scrn;*/
-    /*Pixmap func_pix;*/
-    /*Pixel funcfg, funcbg;*/
+    Widget hpopup, hframe, htext, hdone;
 
     /* 80 columns x 20 rows, I hope */
     width = 45 * XTextWidth(appdata.helpFont, "M", 1) ;
@@ -199,10 +195,7 @@ xgvis_help_controls_cback(Widget w, XtPointer client_data, XtPointer callback_da
     return((XtCallbackProc) 0);
   }
   else {
-    Widget hpopup, hframe, /*hform, hfunc,*/ htext, hdone;
-    /*Screen *scrn;*/
-    /*Pixmap func_pix;*/
-    /*Pixel funcfg, funcbg;*/
+    Widget hpopup, hframe, hform, hfunc, htext, hdone;
 
     /* 80 columns x 20 rows, I hope */
     width = 45 * XTextWidth(appdata.helpFont, "M", 1) ;
@@ -269,14 +262,16 @@ xgvis_help_controls_cback(Widget w, XtPointer client_data, XtPointer callback_da
 
 /* ARGSUSED */
 XtCallbackProc
-xgvis_help_torgersen_gower_cback(Widget w, XtPointer client_data, XtPointer callback_data)
+xgvis_help_torgerson_gower_cback(Widget w, XtPointer client_data, XtPointer callback_data)
 {
   char fname[100];
   char message[MSGLENGTH];
   char *xgobidir;
   FILE *fp;
   extern xgobidata xgobi;  /* defined in xgvis.c */
-  Dimension /*width,*/ height;
+/*
+  Dimension height;
+*/
 
   xgobidir = getenv("XGOBID");
   if (xgobidir == NULL || strlen(xgobidir) == 0)
@@ -308,7 +303,7 @@ xgvis_help_torgersen_gower_cback(Widget w, XtPointer client_data, XtPointer call
 /*
  * Check that the file is good.
 */
-  (void) strcat(fname, "/bitmaps/stress_torgersen_gower.xbm");
+  (void) strcat(fname, "/bitmaps/strain_torgerson_gower.xbm");
   if ((fp = fopen(fname, "r")) == NULL)
   {
     sprintf(message,
@@ -335,15 +330,17 @@ xgvis_help_torgersen_gower_cback(Widget w, XtPointer client_data, XtPointer call
 
     func_pix = XCreatePixmapFromBitmapData(display,
       RootWindowOfScreen(scrn),
-      stress_torgersen_gower_bits, 
-      stress_torgersen_gower_width, 
-      stress_torgersen_gower_height,
+      strain_torgerson_gower_bits, 
+      strain_torgerson_gower_width, 
+      strain_torgerson_gower_height,
       funcfg, funcbg,
       depth);
 
     /* 80 columns x 20 rows, I hope */
     /* width = 85 * XTextWidth(appdata.helpFont, "M", 1) ; */
+/*
     height = 20 * FONTHEIGHT(appdata.helpFont);
+*/
 
   /*
    * Create the popup itself.
@@ -413,7 +410,9 @@ xgvis_help_kruskal_shepard_cback(Widget w, XtPointer client_data, XtPointer call
   char *xgobidir;
   FILE *fp;
   extern xgobidata xgobi;  /* defined in xgvis.c */
-  Dimension /*width,*/ height;
+/*
+  Dimension height;
+*/
 
   xgobidir = getenv("XGOBID");
   if (xgobidir == NULL || strlen(xgobidir) == 0)
@@ -480,7 +479,9 @@ xgvis_help_kruskal_shepard_cback(Widget w, XtPointer client_data, XtPointer call
 
     /* 80 columns x 20 rows, I hope */
     /* width = 85 * XTextWidth(appdata.helpFont, "M", 1) ; */
+/*
     height = 20 * FONTHEIGHT(appdata.helpFont);
+*/
 
   /*
    * Create the popup itself.
@@ -595,10 +596,7 @@ xgvis_help_input_file_formats_cback(Widget w, XtPointer client_data, XtPointer c
     return((XtCallbackProc) 0);
   }
   else {
-    Widget hpopup, hframe, /*hform, hfunc,*/ htext, hdone;
-/*  Screen *scrn;
-    Pixmap func_pix;
-    Pixel funcfg, funcbg; */
+    Widget hpopup, hframe, htext, hdone;
 
     /* 80 columns x 20 rows, I hope */
     width = 45 * XTextWidth(appdata.helpFont, "M", 1) ;

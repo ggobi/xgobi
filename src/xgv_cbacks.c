@@ -22,11 +22,9 @@ extern void mds_once(Boolean);
 extern void set_vgroups(void);
 extern void set_dist_matrix_from_edges(struct array *, struct array *, int);
 extern void set_dist_matrix_from_pos(struct array *, struct array *, double);
-extern void set_dist_matrix_from_pos_dot(struct array *, struct array *, int);
 extern void reinit_stress(void);
-extern void scramble_data(void);
-extern void center_data(void);
-extern void symmetrize_dists(void);
+extern void scramble_pos(void);
+extern void center_scale_pos(void);
 extern double drandval(int);
 
 static void
@@ -153,7 +151,6 @@ choose_dist_cback(Widget w, XtPointer client_data, XtPointer callback_data)
       break;
     case DOTPROD:
     case COSDIST:
-      set_dist_matrix_from_pos_dot(&dist, &pos, dist_type);
       break;
     case USER_SUPPLIED:
     case ADJACENCY:
@@ -173,6 +170,8 @@ reset_cback(Widget w, XtPointer client_data, XtPointer callback_data)
     for(i = 0; i < pos.nrows; i++)
       pos.data[i][k] = pos_orig.data[i][k];
 
+  center_scale_pos();
+
   update_plot(&xgobi);
   plot_once(&xgobi);
 
@@ -183,7 +182,7 @@ reset_cback(Widget w, XtPointer client_data, XtPointer callback_data)
 XtCallbackProc
 scramble_cback(Widget w, XtPointer client_data, XtPointer callback_data)
 {
-  scramble_data();
+  scramble_pos();
 
   update_plot(&xgobi);
   plot_once(&xgobi);
@@ -196,31 +195,7 @@ XtCallbackProc
 center_cback(Widget w, XtPointer client_data, XtPointer callback_data)
 {
 
-  center_data();
-
-  update_plot(&xgobi);
-  plot_once(&xgobi);
-
-  reinit_stress();
-}
-
-/* ARGSUSED */
-XtCallbackProc
-symmetrize_cback(Widget w, XtPointer client_data, XtPointer callback_data)
-{
-  symmetrize_dists();
-
-  update_plot(&xgobi);
-  plot_once(&xgobi);
-
-  reinit_stress();
-}
-
-/* ARGSUSED */
-XtCallbackProc
-raw_cback(Widget w, XtPointer client_data, XtPointer callback_data)
-{
-  raw_data();
+  center_scale_pos();
 
   update_plot(&xgobi);
   plot_once(&xgobi);
@@ -261,19 +236,6 @@ turn_off_scaling(xgobidata *xg, XtIntervalId id)
     is_rescale = 0;
 }
 
-/* ARGSUSED */
-XtCallbackProc
-xgv_rescale_cback(Widget w, XtPointer client_data, XtPointer callback_data)
-/*
- * This callback defines the actions associated with the rescale button.
-*/
-{
-  XtIntervalId rescale_timeout_id;
-  is_rescale = 1;
-
-  rescale_timeout_id = XtAppAddTimeOut(app_con,
-    500, (XtTimerCallbackProc) turn_off_scaling, NULL );
-}
 
 /* ARGSUSED */
 XtCallbackProc
@@ -293,14 +255,16 @@ mds_lnorm_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 {
   Arg args[1];
   char str[30];
-  extern Widget mds_lnorm_label;
+  extern Widget mds_lnorm_label, mds_lnorm_sbar;
 
   float slidepos = * (float *) slideposp;
 
-  mds_lnorm = floor(((double) (5.0 * slidepos) + 1.0)*10.) / 10. ;
+  mds_lnorm = floor(((double) (5.0 * slidepos * 1.04) + 1.0)*10.) / 10. ;
+  if(mds_lnorm > 6.) mds_lnorm = 6.;
   sprintf(str, "Minkowski n'rm (m): %3.1f ", mds_lnorm);
   XtSetArg(args[0], XtNstring, str);
   XtSetValues(mds_lnorm_label, args, 1);
+  XawScrollbarSetThumb(mds_lnorm_sbar, (mds_lnorm-1.)/1.04/5.0 , -1.);
 
   mds_lnorm_over_distpow = mds_lnorm/mds_distpow;
   mds_distpow_over_lnorm = mds_distpow/mds_lnorm;
@@ -319,14 +283,29 @@ mds_power_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 {
   Arg args[1];
   char str[30];
-  extern Widget mds_power_label;
+  extern Widget mds_power_label, mds_power_sbar;
 
   float slidepos = * (float *) slideposp;
 
-  mds_power = floor(6. * slidepos * 10.) / 10. ;
-  sprintf(str, "%s: %3.1f ", "Data Power (D^p)", mds_power);
-  XtSetArg(args[0], XtNstring, str);
-  XtSetValues(mds_power_label, args, 1);
+  if (metric_nonmetric == METRIC) {
+    mds_power = floor(6. * slidepos * 1.04 * 10.) / 10. ;
+    if(mds_power > 6.) mds_power = 6.;
+    if(KruskalShepard_classic == KRUSKALSHEPARD) {
+      sprintf(str, "Data Power (D^p): %3.1f ",  mds_power);
+    } else {
+      sprintf(str, "Data Power (D^2p): %3.1f ",  mds_power);
+    }
+    XtSetArg(args[0], XtNstring, str);
+    XtSetValues(mds_power_label, args, 1);
+    XawScrollbarSetThumb(mds_power_sbar, mds_power/1.04/6.0, -1.);
+  } else { /* nonmetric */
+    mds_isotonic_mix = floor(slidepos * 1.04 * 100.)/100. ;
+    if(mds_isotonic_mix > 1.0) mds_isotonic_mix = 1.0;
+    sprintf(str, "Isotonic(D): %d%% ", (int) (mds_isotonic_mix*100));
+    XtSetArg(args[0], XtNstring, str);
+    XtSetValues(mds_power_label, args, 1);
+    XawScrollbarSetThumb(mds_power_sbar, mds_isotonic_mix/1.04, -1.);
+  }
 
 /*
  * The third column of the diagnostics matrix has to be
@@ -335,6 +314,7 @@ mds_power_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 */
   mds_once(False);
   update_dissim_plot();
+
 }
 
 /* ARGSUSED */
@@ -346,14 +326,16 @@ mds_distpow_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 {
   Arg args[1];
   char str[30];
-  extern Widget mds_distpow_label;
+  extern Widget mds_distpow_label, mds_distpow_sbar;
 
   float slidepos = * (float *) slideposp;
 
-  mds_distpow = floor(6. * slidepos * 10.) / 10. ;
+  mds_distpow = floor(6. * slidepos * 1.04 * 10.) / 10. ;
+  if(mds_distpow > 6.) mds_distpow = 6.;
   sprintf(str, "%s: %3.1f ", "Dist Power (d^q)", mds_distpow);
   XtSetArg(args[0], XtNstring, str);
   XtSetValues(mds_distpow_label, args, 1);
+  XawScrollbarSetThumb(mds_distpow_sbar, mds_distpow/1.04/6., -1.);
 
   mds_lnorm_over_distpow = mds_lnorm/mds_distpow;
   mds_distpow_over_lnorm = mds_distpow/mds_lnorm;
@@ -371,14 +353,17 @@ mds_weightpow_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 {
   Arg args[1];
   char str[30];
-  extern Widget mds_weightpow_label;
+  extern Widget mds_weightpow_label, mds_weightpow_sbar;
 
   float slidepos = * (float *) slideposp;
 
-  mds_weightpow = floor((slidepos - 0.5)*8.0*10.)/10.;
+  mds_weightpow = floor((slidepos - 0.5) * 1.08 * 8.0 * 10.)/10.;
+  if(mds_weightpow > 4.) mds_weightpow = 4.;
+  if(mds_weightpow < -4.) mds_weightpow = -4.;
   sprintf(str, "%s: %4.1f ", "Wght pow (w=D^r)", mds_weightpow);
   XtSetArg(args[0], XtNstring, str);
   XtSetValues(mds_weightpow_label, args, 1);
+  XawScrollbarSetThumb(mds_weightpow_sbar, mds_weightpow/1.08/8. + 0.5, -1.);
 
   mds_once(False);
 }
@@ -392,14 +377,16 @@ mds_within_between_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 {
   Arg args[1];
   char str[30];
-  extern Widget mds_within_between_label;
+  extern Widget mds_within_between_label, mds_within_between_sbar;
 
   float slidepos = * (float *) slideposp;
 
-  mds_within_between = floor(slidepos * 2.0 * 50.) / 50.;
+  mds_within_between = floor(slidepos * 1.04 * 2.0 * 50.) / 50.;
+  if(mds_within_between > 2.0) mds_within_between = 2.0;
   sprintf(str, "Withn=%3.2f Betwn=%3.2f", (2. - mds_within_between), mds_within_between);
   XtSetArg(args[0], XtNstring, str);
   XtSetValues(mds_within_between_label, args, 1);
+  XawScrollbarSetThumb(mds_within_between_sbar, mds_within_between/1.04/2., -1.);
 
   mds_once(False);
 }
@@ -414,16 +401,16 @@ mds_rand_select_cback (Widget w, XtPointer client_data, XtPointer slideposp)
   Arg args[1];
   char str[30];
   int i;
-  extern Widget mds_rand_select_label;
+  extern Widget mds_rand_select_label, mds_rand_select_sbar;
 
   float slidepos = * (float *) slideposp;
 
   mds_rand_select_val = floor(slidepos*1.04 * 100.) / 100.;
   if(mds_rand_select_val > 1.0) mds_rand_select_val = 1.0;
-  /*sprintf(str, "Select'n prob: %3.2f%%", mds_rand_select_val);*/
-  sprintf(str, "Select'n prob: %d%%", (int)(100 * mds_rand_select_val));
+  sprintf(str, "Select'n prob: %d%%", (int) (mds_rand_select_val*100));
   XtSetArg(args[0], XtNstring, str);
   XtSetValues(mds_rand_select_label, args, 1);
+  XawScrollbarSetThumb(mds_rand_select_sbar, mds_rand_select_val/1.04, -1.);
 
   mds_once(False);
 }
@@ -448,20 +435,20 @@ mds_perturb_cback (Widget w, XtPointer client_data, XtPointer slideposp)
 {
   Arg args[1];
   char str[30];
-  int i;
-  extern Widget mds_perturb_label;
+  extern Widget mds_perturb_label, mds_perturb_sbar;
 
   float slidepos = * (float *) slideposp;
 
-  mds_perturb_val = floor(slidepos*1.04 * 100.) / 100.;
+  mds_perturb_val = floor(slidepos * 1.04 * 100.) / 100.;
   if(mds_perturb_val > 1.0) mds_perturb_val = 1.0;
-  /*sprintf(str, "Perturb: %3.2f%%", mds_perturb_val);*/
-  sprintf(str, "Perturb: %d%%", (int)(100 * mds_perturb_val));
+  sprintf(str, "Perturb: %d%%", (int) (mds_perturb_val*100));
   XtSetArg(args[0], XtNstring, str);
   XtSetValues(mds_perturb_label, args, 1);
+  XawScrollbarSetThumb(mds_perturb_sbar, mds_perturb_val/1.04, -1.);
 
   mds_once(False);
 }
+
 /* ARGSUSED */
 XtCallbackProc
 mds_perturb_new_cback (Widget w, XtPointer client_data, XtPointer callback_data)
@@ -476,7 +463,7 @@ mds_perturb_new_cback (Widget w, XtPointer client_data, XtPointer callback_data)
       pos.data[i][k] = (1.0-mds_perturb_val)*pos.data[i][k] + (mds_perturb_val)*drandval(NORMAL);  /* standard normal */
     }
 
-  /*  scale_array_mean(&pos, pos.nrows, pos.ncols); */
+  center_scale_pos();
 
   update_plot(&xgobi);
   plot_once(&xgobi);
@@ -560,7 +547,7 @@ save_distance_matrix_go (Widget w, XtPointer cldata, XEvent *event)
       int i, j;
       for (i = 0; i < dist.nrows; i++) {
         for (j = 0; j < dist.ncols; j++) {
-          fprintf(fp, "%2.3f ", dist.data[i][j]);
+          fprintf(fp, "%2.4f ", dist.data[i][j]);
         }
         fprintf(fp, "\n");
       }
@@ -681,6 +668,7 @@ mds_launch_cback (Widget w, XtPointer client_data, XtPointer callback_data)
   char **col_name;
   int nc = 7;
   static char *clab[] = {"d_ij", "f(D_ij)", "D_ij", "Res_ij", "Wgt_ij", "i", "j"};
+  static char *blab[] = {"b_ij", "f(D_ij)", "D_ij", "Res_ij", "Wgt_ij", "i", "j"};
   char fname[512], config_basename[512];
   FILE *fp, *fpdat, *fprow, *fpvgrp;
   static int iter = 0;
@@ -691,25 +679,17 @@ mds_launch_cback (Widget w, XtPointer client_data, XtPointer callback_data)
   struct stat buf;
   int subset_size=0;
 
-  /* AB part of disabling the subselection of distances for the Shepard plot
-  char *subset_str, *nstr;
-  XtVaGetValues(mds_launch_ntxt, XtNstring, &subset_str, NULL);
-  if (strlen(subset_str) == 0)
-    subset_size = num_active_dist;
-  else
-    subset_size = atoi(subset_str);
-  if (subset_size == 0)
-    subset_size = num_active_dist;
-  else subset_size = MIN(subset_size, num_active_dist);
-  */
   subset_size = num_active_dist;
 
   col_name = (char **) XtMalloc(
     (Cardinal) nc * sizeof (char *));
-  for (j=0; j<nc; j++)
-    col_name[j] = clab[j];
+  if(KruskalShepard_classic == KRUSKALSHEPARD) {
+    for (j=0; j<nc; j++) col_name[j] = clab[j];
+  } else {
+    for (j=0; j<nc; j++) col_name[j] = blab[j];
+  }
 
-  sprintf(config_basename, "Shepard_diagram_%d", iter);
+  sprintf(config_basename, "Shepard_Plot_%d", iter);
   
   /* Write out the data */
   sprintf(fname, "%s.dat", config_basename);
