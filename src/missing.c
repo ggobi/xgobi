@@ -36,6 +36,11 @@
 #include "xgobivars.h"
 #include "xgobiexterns.h"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+
 static Boolean use_brush_groups = False;
 
 static Widget ipopup = (Widget) NULL;
