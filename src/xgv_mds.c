@@ -1,24 +1,6 @@
-/* call:
-  ./xgvis /usr/andreas/XGVIS/MORSE/morsecodes &
-  ./xgvis /usr/andreas/XGVIS/GRAPHS/perm5 &
- */
-
-/* AB: changed loss function, fixed old mds_respow =2
-   May 18, 1998: reused mds_respow as power of ||x_i-x_j||^mds_respow
-   May 25, 1998: reused mds_respow for w_ij = D_ij^(mds_respow-2)
+/* *********************************************************
+ * mds.c: multidimensional scaling (a la andreas) ML 2/92. *
 */
-/* dfs:
-   Oct 15, 1998: using glyph instead of label for anchoring
-*/
-
-/* mds.c: multidimensional scaling (a la andreas) ML 2/92. */
-/* molecule.c: run as part of xgvis ML 2/92. */
-/*
- * molecule.c: find layout with attraction/repulsion.
- * dists.c: writes out distance matrix.
- * ML: 11/91.
-*/
-
 
 /*
 static Boolean
@@ -57,23 +39,20 @@ extern void make_empty_array(struct array *, int, int);
 extern void draw_stress(void);
 extern void zero_array(struct array *);
 extern void update_shepard_labels(int);
-extern void draw_anchor_symbol(xgobidata *, int);
 
 extern Widget metric_cmd[2];
+extern int moving_point, move_type;
 
 #define SAMEGLYPH(i,j) \
 ( xg->color_now[(i)]      == xg->color_now[(j)] &&      \
   xg->glyph_now[(i)].type == xg->glyph_now[(j)].type && \
-  xg->glyph_now[(i)].size == xg->glyph_now[(j)].size )  \
-
-#define CURRENTGLYPH(i) \
-( xg->color_now[(i)]      == xg->color_now[point_midbutton] &&      \
-  xg->glyph_now[(i)].type == xg->glyph_now[point_midbutton].type && \
-  xg->glyph_now[(i)].size == xg->glyph_now[point_midbutton].size )  \
-
+  xg->glyph_now[(i)].size == xg->glyph_now[(j)].size )
 
 #define IJ i*dist.ncols+j 
 #define JI j*dist.nrows+i
+
+int *point_status INIT (= NULL);
+int point_is_out=0, point_is_in=1, point_is_anchor=2, point_is_dragged=4;
 
 double delta = 1E-10;
 #define signum(x) (((x) < 0.0) ? (-1.0) : (((x) > 0.0) ? (1.0) : (0.0)))
@@ -99,14 +78,100 @@ Lp_distance_pow(int i, int j)
   }
 }
 
-double *pos_mean INIT(= NULL);  /* mean position of active points */
+/* begin centering and sizing routines */
+
+void
+get_center(void)
+{
+  int i, k, n;
+  xgobidata *xg = (xgobidata *) &xgobi;
+
+  if (pos_mean == NULL) { pos_mean = (double *) XtMalloc(MAXDIMS * sizeof(double)); }
+
+  n = 0;
+  for(k=0; k<mds_dims; k++) { pos_mean[k] = 0.; }
+  for(i=0; i<pos.nrows; i++)
+    if(point_status[i] != point_is_out) {
+      for(k=0; k<mds_dims; k++) 
+	pos_mean[k] += pos.data[i][k];
+      n++;
+    }
+  for(k=0; k<mds_dims; k++) { pos_mean[k] /= n; }
+}
+
+void
+get_center_scale(void)
+{
+  int n, i, k;
+  xgobidata *xg = (xgobidata *) &xgobi;
+
+  get_center();
+
+  n = 0;
+  pos_scl = 0.;
+  for(i=0; i<pos.nrows; i++)
+    if(point_status[i] == point_is_in || 
+       (mds_group_ind == anchorscales && point_status[i] == point_is_anchor)) {
+      for(k=0; k<mds_dims; k++) 
+	pos_scl += fabs(pos.data[i][k] - pos_mean[k]);
+      n++;
+    }
+  pos_scl = pos_scl/n/mds_dims;
+}
+
+void
+center_data(void) 
+{
+  int i, k;
+
+  get_center();
+
+  for (i=0; i<pos.nrows; i++)
+    if(point_status[i] == point_is_in || 
+       (mds_group_ind==anchorscales && point_status[i] == point_is_anchor))
+      for (k=0; k<mds_dims; k++)
+	pos.data[i][k] -= pos_mean[k];
+}
+
+/* restore configuration to old scale */
+void
+scale_data(void) 
+{
+  int i, k;
+
+  get_center_scale();
+
+  for (i=0; i<pos.nrows; i++)
+    if(point_status[i] == point_is_in || 
+       (mds_group_ind==anchorscales && point_status[i] == point_is_anchor))
+      for (k=0; k<mds_dims; k++)
+	pos.data[i][k] = (pos.data[i][k] - pos_mean[k])/pos_scl + pos_mean[k];
+}
+
+void
+center_scale_data(void) 
+{
+  int i, k;
+
+  get_center_scale();
+
+  for (i=0; i<pos.nrows; i++)
+    if(point_status[i] == point_is_in || 
+       (mds_group_ind==anchorscales && point_status[i] == point_is_anchor))
+      for (k=0; k<mds_dims; k++)
+	pos.data[i][k] = (pos.data[i][k] - pos_mean[k])/pos_scl;
+}
+
+/* end centering and sizing routines */
+
 double
 dot_prod(int i, int j)
 {
   double dsum = 0.0;
   int k;
 
-  for(k=0; k<mds_dims; k++)  dsum += (pos.data[i][k] - pos_mean[k])*(pos.data[j][k] - pos_mean[k]);
+  for(k=0; k<mds_dims; k++) 
+    dsum += (pos.data[i][k] - pos_mean[k])*(pos.data[j][k] - pos_mean[k]);
   return(dsum);
 }
 
@@ -116,41 +181,9 @@ L2_norm(double *p1)
   double dsum = 0.0;
   int k;
 
-  for (k = mds_freeze_var; k < mds_dims; k++)  dsum += p1[k]*p1[k];
+  for (k = mds_freeze_var; k < mds_dims; k++)  
+    dsum += (p1[k] - pos_mean[k])*(p1[k] - pos_mean[k]);
   return(dsum);
-}
-
-
-void
-set_moving_points()
-{
-  int i, k, n;
-  xgobidata *xg = (xgobidata *) &xgobi;
-  extern int moving_point; /* three variables from move_points.c */
-  extern int move_type;
-  extern int point_midbutton; /* used in macros SAMEGLYPH */
-
-  if (xg->is_point_moving && moving_point != -1) {
-    if(move_type==0) {
-      for (k=0; k < mds_dims; k++) {
-	pos.data[moving_point][k] = xg->raw_data[moving_point][k] ;
-    }}
-    if(move_type==1) {
-      for (i=0; i<xg->nrows_in_plot; i++) {
-	n = xg->rows_in_plot[i];
-	if (!xg->erased[n] && SAMEGLYPH(n,moving_point)) {
-	  for (k=0; k < mds_dims; k++) {
-	    pos.data[n][k] = xg->raw_data[n][k] ;
-    }}}}
-    if(move_type==2) {
-      for (i=0; i<xg->nrows_in_plot; i++) {
-	n = xg->rows_in_plot[i];
-	if (!xg->erased[n]) {
-	  for (k=0; k < mds_dims; k++) {
-	    pos.data[n][k] = xg->raw_data[n][k] ;
-    }}}}
-  }  /*  if (xg->is_point_moving && moving_point != -1) { */
-
 }
 
 
@@ -162,7 +195,7 @@ set_weights()
   double this_weight;
   static double local_weightpow = 0.;
   static double local_within_between = 1.;
-  xgobidata *xg = (xgobidata *) &xgobi; /* used in macros SAMEGLYPH and CURRENTGLYPH */
+  xgobidata *xg = (xgobidata *) &xgobi; /* used in macros SAMEGLYPH and ACHORED */
 
   /* the weights will be used in metric and nonmetric scaling 
    * as soon as mds_weightpow != 0. or mds_within_between != 1.
@@ -255,10 +288,13 @@ update_stress()
 } /* end update_stress() */
 
 
+/* we assume in this routine that trans_dist contains 
+   dist.data for KRUSKALSHEPARD and 
+   -dist.data*dist.data for CLASSIC MDS */
 void
 power_transform()
 {
-  double tmp;
+  double tmp, fac;
   int i;
 
   if(mds_power == 1.) { 
@@ -267,24 +303,25 @@ power_transform()
     if(KruskalShepard_classic == KRUSKALSHEPARD) { 
       for(i=0; i<ndistances; i++) {
 	tmp = trans_dist[i];
-	if(tmp != DBL_MAX) trans_dist[i] = tmp*tmp;
+	if(tmp != DBL_MAX) trans_dist[i] = tmp*tmp/dist_max;
       }
     } else { 
       for(i=0; i<ndistances; i++) {
 	tmp = trans_dist[i];
-	if(tmp != DBL_MAX) trans_dist[i] = -tmp*tmp;
+	if(tmp != DBL_MAX) trans_dist[i] = -tmp*tmp/dist_max;
       }
     }
   } else {
+    fac = pow(dist_max, mds_power-1);
     if(KruskalShepard_classic == KRUSKALSHEPARD) { 
       for(i=0; i<ndistances; i++) {
 	tmp = trans_dist[i];
-	if(tmp != DBL_MAX) trans_dist[i] = pow(tmp, mds_power);
+	if(tmp != DBL_MAX) trans_dist[i] = pow(tmp, mds_power)/fac;
       }
     } else { 
       for(i=0; i<ndistances; i++) {
 	tmp = trans_dist[i];
-	if(tmp != DBL_MAX) trans_dist[i] = -pow(-tmp, mds_power);
+	if(tmp != DBL_MAX) trans_dist[i] = -pow(-tmp, mds_power)/fac;
       }
     }
   }
@@ -310,24 +347,26 @@ int realCompare(const void* aPtr, const void* bPtr)
 void
 isotonic_transform()
 {
-  int i, j, ii;
-  double tmp, tmp_dist, tmp_distsum, tmp_weightsum, this_weight, t_d_i, t_d_ii, tmp_distmax, tmp_distmin;
-  /* double tmp_distmean; */
+  int i, j, ii, ij, n;
+  double tmp, tmp_dist, tmp_distsum, tmp_weightsum, this_weight,
+    t_d_i, t_d_ii, tmp_distmax, tmp_distmin, tmp_distmean, tmp_delta;
   Boolean finished;
   static int prev_nonmetric_active_dist = 0;
-
 
   /* the sort index for dist.data */
   if (trans_dist_index == NULL) {
     trans_dist_index = (int *)    XtMalloc(ndistances * sizeof(int)); 
+    printf("allocated trans_dist_index \n");
   }
   /* block lengths */
   if (bl == NULL) {
     bl               = (int *)    XtMalloc(ndistances * sizeof(int)); 
+    printf("allocated block lengths \n");
   }
   /* block weights */
   if(bl_w == NULL && (mds_weightpow != 0. || mds_within_between != 1.)) {
     bl_w             = (double *) XtMalloc(ndistances * sizeof(double)); 
+    printf("allocated block weights \n");
   }
 
   /* sort if necessary 
@@ -342,6 +381,7 @@ isotonic_transform()
       }}
     Myqsort(trans_dist_index, ndistances, sizeof(int), realCompare);
     prev_nonmetric_active_dist = num_active_dist;
+    printf("sorted the dissimilarity data \n");
   }
 
   /* initialize blocks wrt ties; this should also preserve symmetry if present */
@@ -387,9 +427,11 @@ isotonic_transform()
       t_d_ii = trans_dist[trans_dist_index[ii]];
       if (t_d_i > t_d_ii) { /* pool blocks starting at i and ii */
 	if(mds_weightpow == 0. && mds_within_between == 1.) {
-	  trans_dist[trans_dist_index[i]] = (t_d_i * bl[i] + t_d_ii * bl[ii]) / (bl[i] + bl[ii]);
+	  trans_dist[trans_dist_index[i]] = 
+	    (t_d_i * bl[i] + t_d_ii * bl[ii]) / (bl[i] + bl[ii]);
 	} else {
-	  trans_dist[trans_dist_index[i]] = (t_d_i * bl_w[i] + t_d_ii * bl_w[ii]) / (bl_w[i] + bl_w[ii]); 
+	  trans_dist[trans_dist_index[i]] = 
+	    (t_d_i * bl_w[i] + t_d_ii * bl_w[ii]) / (bl_w[i] + bl_w[ii]); 
 	  bl_w[i] += bl_w[ii];
 	}
 	bl[i] += bl[ii];
@@ -408,31 +450,39 @@ isotonic_transform()
     }
   }
 
-  /* rescale trans_dist to max 1 */
-  if(KruskalShepard_classic == KRUSKALSHEPARD) {
-    tmp_distmax = -DBL_MAX;
-    for(i=0; i < num_active_dist; i++) {
-      tmp_dist = trans_dist[trans_dist_index[i]]; 
-      if(tmp_dist > tmp_distmax) tmp_distmax = tmp_dist; 
-    }
-    for(i=0; i < num_active_dist; i++) trans_dist[trans_dist_index[i]] /= tmp_distmax;
-  } else { /* CLASSIC: trans_dist has either sign; map to [-1,0] */
-    tmp_distmin = DBL_MAX;  tmp_distmax = -DBL_MAX;
-    for(i=0; i < num_active_dist; i++) {
-      tmp = trans_dist[trans_dist_index[i]];
-      if(tmp < tmp_distmin) tmp_distmin = tmp;
-      if(tmp > tmp_distmax) tmp_distmax = tmp;
-    }
-    for(i=0; i < num_active_dist; i++)
-      trans_dist[trans_dist_index[i]] = (trans_dist[trans_dist_index[i]] - tmp_distmin)/(tmp_distmax - tmp_distmin) - 1.0;
-  }
+  /* mix isotonic with raw according to mds_isotonic_mix entered interactively */
+  if(mds_isotonic_mix != 1.0) {
+    for (i = 0 ; i < dist.nrows; i++) 
+      for (j = 0; j < dist.ncols; j++) {
+	ij = IJ;
+	if(trans_dist[ij] != DBL_MAX) {
+	  if(mds_power == 1.0) {
+	    if(KruskalShepard_classic == KRUSKALSHEPARD) {
+	      trans_dist[ij] = mds_isotonic_mix * trans_dist[ij] + 
+		(1-mds_isotonic_mix) * dist.data[i][j];
+	    } else {
+	      trans_dist[ij] = mds_isotonic_mix * trans_dist[ij] - 
+		(1-mds_isotonic_mix) * dist.data[i][j]*dist.data[i][j];
+	    }
+	  } else { /* mds_power != 1.0 */
+	    if(KruskalShepard_classic == KRUSKALSHEPARD) {
+	      trans_dist[ij] = mds_isotonic_mix * trans_dist[ij] + 
+		(1-mds_isotonic_mix) * pow(dist.data[i][j], mds_power);
+	    } else {
+	      trans_dist[ij] = mds_isotonic_mix * trans_dist[ij] - 
+		(1-mds_isotonic_mix) * pow(dist.data[i][j], 2*mds_power);
+	    }
+	  }
+	} /* end if(trans_dist[ij] != DBL_MAX) { */
+      } /* end for (j = 0; j < dist.ncols; j++) { */
+  } /* end if(mds_isotonic_mix != 1.0) */
 
   update_dissim_plot();
 
 } /* end isotonic_transform() */
 
 
-/* ---------------------------------------------------------------- */
+/* ---------------------------------------------------------------- /*
 /*
  * Perform one loop of the iterative mds function.
  *
@@ -442,56 +492,22 @@ isotonic_transform()
 void
 mds_once(Boolean doit)
 {
-  static int i, j, k, /*ii,*/ n;
+  static int i, j, k, ii, n;
 
   static Boolean gradient_p = True;
   static struct array gradient;
   
-  static int prev_active_dist = -1 /*, prev_nonmetric_active_dist = -1*/;
+  static int prev_active_dist = -1,  prev_nonmetric_active_dist = -1;
 
-  /*static Boolean finished;*/
+  static Boolean finished;
 
-  static double dist_config, /*dist_data,*/ dist_trans, resid, weight;
-  static double step_mag, /*step_dir,*/ gsum, psum, gfactor;
-  static double tmp;
-  /* static double tmp_max, t_d_i, t_d_ii, tmp_weight, tmp_mean, tmp_dist, tmp_sum; */
-  /*static double tmp_rand;*/
+  static double dist_config, dist_data, dist_trans, resid, weight;
+  static double step_mag, step_dir, gsum, psum, gfactor;
+  static double tmp, tmp_dist, tmp_sum, tmp_weight, tmp_mean, tmp_max, t_d_i, t_d_ii;
+  static double tmp_rand;
 
-  /* used in macros SAMEGLYPH and CURRENTGLYPH */
+  /* used in macros SAMEGLYPH and ACHORED  */
   xgobidata *xg = (xgobidata *) &xgobi;
-  extern int point_midbutton;  
-
-
-  /* AB: tried out linking D_ij^mds_power to ||x_i-x_j||^mds_weightpow:
-     worked on morsecodes for powers between 1 and 2, 
-     but higher than 2 bombed, even 2 was highly artifactual
-  */
-
-  /*
-  printf("enter mds_once, doit=%d \n", doit);
-  */
-
-  /* update the anchor symbol */
-  draw_anchor_symbol(xg, point_midbutton);
-
-  /* allocate position and compute means */
-  if (pos_mean == NULL) {
-    pos_mean = (double *) XtMalloc(pos.ncols * sizeof(double));
-  }
-  n = 0;
-  for(k=0; k<mds_dims; k++) { pos_mean[k] = 0.; }
-  for(i=0; i<pos.nrows; i++) {
-    if (xg->erased[i] == 1) continue;
-    if (xg->ncols == xg->ncols_used) 
-      if (xg->clusv[(int)GROUPID(i)].excluded == 1) 
-        continue;
-    if ((mds_group_ind == anchorscales || mds_group_ind == anchorfixed) && !CURRENTGLYPH(i)) 
-      continue;
-    for(k=0; k<mds_dims; k++)
-      pos_mean[k] += pos.data[i][k];
-    n++;
-  }
-  for(k=0; k<mds_dims; k++) { pos_mean[k] /= n; }
 
   /* preparation for transformation */
   if (trans_dist == NULL) {
@@ -514,32 +530,65 @@ mds_once(Boolean doit)
   /* random selection vector */
   set_random_selection();
 
-  /* -------------------- collect and count active dissimilarities --------------- */
+  /* -------- collect activity status for each point: excluded, erased, anchor (2), dragged ------- */
+  if(point_status == NULL) point_status = (int *) XtMalloc(pos.nrows * sizeof(int)); 
+  /* out */
+  for(i=0; i<pos.nrows; i++) 
+    point_status[i] = point_is_out;
+  /* in */
+  for(i=0; i<xg->nrows_in_plot; i++) { 
+    n = xg->rows_in_plot[i]; 
+    if(!xg->erased[n]) point_status[n] = point_is_in; }
+  /* anchors of either kind */  
+  if (xg->ncols == xg->ncols_used) {
+    for (i=0; i<pos.nrows; i++)
+      if (xg->clusv[(int)GROUPID(i)].excluded == 1) 
+	point_status[i] = point_is_out;
+    if(anchored != NULL) {
+      if (mds_group_ind == anchorfixed || mds_group_ind == anchorscales)
+	for (i=0; i<pos.nrows; i++)
+	  if (point_status[i] != point_is_out && anchored[(int) xg->raw_data[(i)][xg->ncols-1]])
+	    point_status[i] = point_is_anchor;
+    }
+  }
+  /* dragged by mouse */
+  if (xg->is_point_moving && moving_point != -1) {
+    if(move_type==0) {
+      point_status[moving_point] = point_is_dragged; }
+    else if(move_type==1) {
+      for (i=0; i<pos.nrows; i++)
+	if (point_status[i] != point_is_out && SAMEGLYPH(i,moving_point)) 
+	  point_status[i] = point_is_dragged; }
+    else if(move_type==2) {
+      for (i=0; i<pos.nrows; i++)
+	if (point_status[i] != point_is_out)
+	  point_status[i] = point_is_dragged; }
+  }
+
+  /* allocate position and compute means */
+  get_center();
+
+  /* --------------- collect and count active dissimilarities (j's move i's) --------------- */
   num_active_dist = 0;
 
+  /* i's are moved by j's */
   for (i = 0; i < dist.nrows; i++) {
     /* do not exclude moving i's: in nonmetric MDS it matters what the set of distances is!  */
 
-    /* skip erased points */
-    if (xg->erased[i] == 1) continue;
+    /* these points are not moved by the gradient */
+    if (point_status[i] == point_is_out || 
+	(mds_group_ind == anchorfixed && point_status[i] == point_is_anchor) ||
+	point_status[i] == point_is_dragged) 
+      continue;
 
-    /* skip excluded points */
-    if (xg->ncols == xg->ncols_used) 
-      if (xg->clusv[(int)GROUPID(i)].excluded == 1) 
-        continue;
-
+    /* j's are moving i's */    
     for (j = 0; j < dist.ncols; j++) {
 
       /* skip diagonal elements for distance scaling */
       if (i == j && KruskalShepard_classic == KRUSKALSHEPARD) continue; 
 
-      /* skip erased points */
-      if(xg->erased[j] == 1) continue;
-
-      /* skip excluded points */
-      if (xg->ncols == xg->ncols_used)
-        if (xg->clusv[(int)GROUPID(j)].excluded == 1) 
-          continue;
+      /* these points do not contribute to the gradient */
+      if (point_status[j] == point_is_out) continue;
 
       /* if the target distance is missing, skip */
       if (dist.data[i][j] == DBL_MAX) continue;
@@ -547,24 +596,19 @@ mds_once(Boolean doit)
       /* if weight is zero, skip */
       if (weights != NULL && weights[IJ] == 0.) continue;
 
-      /*
-       * if we're using groups, and these two points don't meet
-       * our criteria, skip the pair
-       */
+      /* using groups */
       if (mds_group_ind == within && !SAMEGLYPH(i,j)) continue;
       if (mds_group_ind == between && SAMEGLYPH(i,j)) continue;
-      if (mds_group_ind == anchorscales && !CURRENTGLYPH(j)) continue;
-      if (mds_group_ind == anchorfixed && (CURRENTGLYPH(i) || !CURRENTGLYPH(j))) continue;
 
       /*
-       * If the target distance is within the thresholds
+       * if the target distance is within the thresholds
        * set using the barplot of distances, keep going.
        */
       if (dist.data[i][j] < mds_threshold_low || 
           dist.data[i][j] > mds_threshold_high) continue;
 
       /*
-       * Random selection: needs to be done symmetrically
+       * random selection: needs to be done symmetrically
        */
       if (mds_rand_select_val < 1.0) {
 	if (i < j && rand_sel[IJ] > mds_rand_select_val) continue;
@@ -572,7 +616,7 @@ mds_once(Boolean doit)
       }
 
       /* 
-       * Zero weights:
+       * zero weights:
        * assume weights exist if test is positive, and
        * can now assume that weights are >0 for non-NA
        */
@@ -603,9 +647,6 @@ mds_once(Boolean doit)
   /* --------------- for active dissimilarities, do some work --------------------- */ 
   if (num_active_dist > 0) {
 
-    /* the weights will be used in metric and nonmetric scaling as soon as mds_weightpow != 0. */
-    set_weights();
-
     /* ---- power transform for metric MDS and isotonic transform for nonmetric*/
     if (metric_nonmetric == METRIC) {
       power_transform();
@@ -617,7 +658,6 @@ mds_once(Boolean doit)
     update_stress();
 
   } /* if (num_active_dist > 0) { */
-
     
   /* ------------------------- end active dissimilarities ------------------- */
 
@@ -638,17 +678,20 @@ mds_once(Boolean doit)
     for (i = 0; i < dist.nrows; i++) {
       for (j = 0; j < dist.ncols; j++) {
 
-	dist_trans  = trans_dist[IJ];             	if (dist_trans  ==  DBL_MAX) continue;
+	dist_trans  = trans_dist[IJ];             	
+	if (dist_trans  ==  DBL_MAX) continue;
         dist_config = config_dist[IJ];
 	if(mds_weightpow == 0. && mds_within_between == 1.) { weight = 1.0; } else { weight = weights[IJ]; }
 
         /* gradient */
 	if(KruskalShepard_classic == KRUSKALSHEPARD) {
 	  if (fabs(dist_config) < delta) dist_config = delta;
-	  /* scale independent version:
-	    resid = (dist_trans - stress_dx / stress_xx * dist_config);
-	    */
+	  /* scale independent version: */
+          resid = (dist_trans - stress_dx / stress_xx * dist_config);
+	  /**/
+	  /* scale dependent version: 
 	  resid = (dist_trans - dist_config);
+	  */
 	  if(mds_lnorm != 2) { /* non-Euclidean Minkowski/Lebesgue metric */
 	    step_mag = weight * resid * pow(dist_config, 1 - mds_lnorm_over_distpow);
 	    for (k = 0; k < mds_dims; k++) {
@@ -663,22 +706,20 @@ mds_once(Boolean doit)
 	    else if(mds_distpow == 4) { step_mag = weight * resid * dist_config * dist_config; }
 	    else                      { step_mag = weight * resid * pow(dist_config, mds_distpow-2.); }
 	    for (k = 0; k < mds_dims; k++) {
-	      gradient.data[i][k] += 
-		step_mag * 
-		(pos.data[i][k]-pos.data[j][k]); /* Euclidean! */
+	      gradient.data[i][k] += step_mag * (pos.data[i][k]-pos.data[j][k]); /* Euclidean! */
 	    }
 	  }
 	} else { /* CLASSIC */
-	  /* scale independent version:
-	  resid = (dist_trans - stress_dx / stress_xx * dist_config);
-	  */
+	  /* scale independent version: */
+ 	  resid = (dist_trans - stress_dx / stress_xx * dist_config);
+	  /**/
+	  /* scale dependent version:
 	  resid = (dist_trans - dist_config);
+	  */
 	  step_mag = weight * resid; 
 	  for (k = 0; k < mds_dims; k++) {
-	    gradient.data[i][k] += 
-	      step_mag * 
-	      (pos.data[j][k] - pos_mean[k]);
-	      /*
+	    gradient.data[i][k] += step_mag * (pos.data[j][k] - pos_mean[k]);
+	      /* exact formula would be:
 	      ((1-1/pos.nrows)*pos.data[j][k] - (1-2/pos.nrows)*pos_mean[k] - pos.data[i][k]/pos.nrows); 
 	      */
 	  }
@@ -686,49 +727,51 @@ mds_once(Boolean doit)
 
       } /* for (j = 0; j < dist.nrows; j++) { */
     } /* for (i = 0; i < dist.nrows; i++) { */
+    /* ------------- end gradient accumulation ----------- */   
 
     /* center the classical gradient */
-    if(KruskalShepard_classic == CLASSIC) {
+    if(KruskalShepard_classic == CLASSIC)
       for(k=0; k<mds_dims; k++) {
-	tmp = 0.;
-	for(i=0; i<gradient.nrows; i++)  tmp += gradient.data[i][k];
-	tmp /= gradient.nrows;
-	for(i=0; i<gradient.nrows; i++)  gradient.data[i][k] -= tmp;	
+	tmp = 0.;  n = 0;
+	for (i=0; i<pos.nrows; i++)
+	  if (point_status[i] == point_is_in || 
+	      (mds_group_ind == anchorscales && point_status[i] == point_is_anchor)) 
+	    {
+	    tmp += gradient.data[i][k];  n++;
+	    }
+	tmp /= n;
+	for (i=0; i<pos.nrows; i++)
+	  if (point_status[i] == point_is_in || 
+	      (mds_group_ind == anchorscales && point_status[i] == point_is_anchor)) 
+	    gradient.data[i][k] -= tmp;	
       }
-    }
 
     /* gradient normalizing factor to scale gradient to a fraction of the size of the configuration */
     gsum = psum = 0.0 ;
-    for (i=0; i<gradient.nrows; i++) {
-      gsum += L2_norm(gradient.data[i]);
-      psum += L2_norm(pos.data[i]);
+    for (i=0; i<pos.nrows; i++) {
+      if (point_status[i] == point_is_in || 
+	  (mds_group_ind == anchorscales && point_status[i] == point_is_anchor)) 
+	{
+	gsum += L2_norm(gradient.data[i]);
+	psum += L2_norm(pos.data[i]);
+	}
     }
     if (gsum < delta) gfactor = 0.0;
     else gfactor = mds_stepsize * sqrt(psum/gsum);
 
-    /* add the gradient matrix to the position matrix */
-    for (i=0; i<pos.nrows; i++)
-      for (k=mds_freeze_var; k<mds_dims; k++)
-        pos.data[i][k] += (gfactor * gradient.data[i][k]);
+    /* add the gradient matrix to the position matrix and drag points */
+    for (i=0; i<pos.nrows; i++) {
+      if (point_status[i] == point_is_in || 
+	  (mds_group_ind == anchorscales && point_status[i] == point_is_anchor)) 
+	for (k=mds_freeze_var; k<mds_dims; k++)
+	  pos.data[i][k] += (gfactor * gradient.data[i][k]);
+      if (point_status[i] == point_is_dragged) 
+	for (k=0; k < mds_dims; k++) 
+	  pos.data[i][k] = xg->raw_data[i][k] ;
+    }
 
     /* experiment: normalize point cloud after using simplified gradient */
-    /*
-    for(k=0; k<mds_dims; k++) pos_scl[k] = pos_mean[k] = 0.;
-    for(i=0; i<pos.nrows; i++)
-      for(k=0; k<mds_dims; k++)
-	pos_mean[k] += pos.data[i][k];
-    for(k=0; k<mds_dims; k++) pos_mean[k] /= pos.nrows;
-    for(i=0; i<pos.nrows; i++)
-      for(k=0; k<mds_dims; k++)
-	pos_scl[k] += (pos.data[i][k] - pos_mean[k]) * (pos.data[i][k] - pos_mean[k]);
-    for(k=0; k<mds_dims; k++) pos_scl[k] /= pos.nrows;
-    for(i=0; i<pos.nrows; i++)
-      for(k=0; k<mds_dims; k++)
-	pos.data[i][k] = (pos.data[i][k] - pos_mean[k])/pos_scl[k] + pos_mean[k];
-    */
-
-    /* set moving points where the mouse moved them */
-    set_moving_points();
+    scale_data();
 
   } /*   if (doit && num_active_dist > 0) { */
 
@@ -738,11 +781,15 @@ mds_once(Boolean doit)
     prev_active_dist = num_active_dist;
   }
 
-  /*
-  printf("exit mds_once, doit=%d \n", doit);
-  */
-
 } /* end mds_once() */
 
 /* ---------------------------------------------------------------- */
+
+
+
+
+
+
+
+
 
