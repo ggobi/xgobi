@@ -205,7 +205,10 @@ help(Widget popup_pop, char *helpfile, xgobidata *xg)
       XtNshowGrip, (Boolean) False,
       XtNtype, (XawAsciiType) XawAsciiFile,
       XtNstring, (String) fname,
+      /* AB
       XtNscrollVertical, (XawTextScrollMode) XawtextScrollWhenNeeded,
+      */
+      XtNscrollVertical, (XawTextScrollMode) XawtextScrollAlways,
       XtNdisplayCaret, (Boolean) False,
       XtNfont, (XFontStruct *) appdata.helpFont,
       /* Moving these here from the fallback resources for xgvis */
