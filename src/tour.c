@@ -1954,7 +1954,7 @@ draw_tour_axes(xgobidata *xg)
             (int) (axs.x * xg->tv[0][j]);
           tour_axes[naxes].y1 = cntr.y;
           tour_axes[naxes].y2 = cntr.y -
-  	    (int) (axs.y * xg->tv[1][j]);
+  	        (int) (axs.y * xg->tv[1][j]);
           strcpy(xg->tour_lab[naxes], xg->collab_tform2[j]);
           naxes++;
         }

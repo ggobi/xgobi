@@ -57,7 +57,7 @@ xgobidata xgobi;
 
 
 static char message[MSGLENGTH];
-static char *version_date = "August 21, 2000";
+static char *version_date = "September 15, 2000";
 
 /*
  * These are the panel resources defined uniquely for AtoXgob
