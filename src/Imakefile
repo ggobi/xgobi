@@ -3,6 +3,11 @@
 /**/#	should need to be made is for the XGOBID variable and sometimes
 /**/#	the random number generator.
 /**/#
+
+/**/ Remove the comment delimeters on the second to next line to compile for CORBA.
+/**/ Requires some Omegahat code - see README.corba.
+/**/#define USE_CORBA 1
+
 /**/#  Set XGOBID to the directory containing 
 /**/#  the xgobi directories src, help, ps, etc.
          #XGOBID = $(PWD)/..
@@ -16,11 +21,130 @@
 #EXTRA_LDOPTIONS = -static
       # for gcc
       #CCOPTIONS = -ansi -w -DDEBUG
-      CCOPTIONS = -xansi -DDEBUG -w
+#      CCOPTIONS = -xansi -DDEBUG -w
 
 /**/#  Choose a random number generator, random or drand48
                R = USE_RANDOM
               #R = USE_DRAND48
+
+
+
+
+#ifdef USE_CORBA
+
+
+###### dfs adding to test ############################
+ifndef OMEGA_HOME
+ OMEGA_HOME=/n/project2/swtoolbin/duncan/org/omegahat
+endif
+
+ifndef INSTALL_HOME
+  INSTALL_HOME=$(OMEGA_HOME)
+endif
+ifndef IDLTYPES_DIR
+  IDLTYPES_DIR=$(OMEGA_HOME)/include/IDL
+endif
+
+
+CXX=g++
+
+######################################################
+
+   # Include the CORBA material.
+CORBACONFIG=$(OMEGA_HOME)/Interfaces/CORBA/CORBAConfig
+include $(CORBACONFIG)/Makefile.CORBA
+
+include $(OMEGA_HOME)/Config/GNUmakefile.config
+
+OMEGA_INCLUDES=$(INSTALL_HOME)/include
+
+ # Assume all the omegahat header files have been installed as part
+ # of the omegahat distribution.
+INCLUDES=\
+         -I$(OMEGA_INCLUDES) \
+         -I$(OMEGA_INCLUDES)/Corba \
+         -I/usr/local/include \
+         -I/usr/local/include/OB \
+         -I.
+
+CORBA_LIB_DIR=$(OMEGA_HOME)/lib
+
+CORBA_LIBRARIES= -L$(CORBA_LIB_DIR)  -lCorbaUtils -lOmegaCorba -lCosNaming -lOBX11 -lOB
+IDLCFLAGS=-I. -I$(IDLTYPES_DIR)
+
+CXXLAGS+=-DCORBA_USED=1
+CFLAGS+=-DCORBA_USED=1
+
+CXXFLAGS+= $(INCLUDES)
+
+CFLAGS+=$(CXXFLAGS)
+
+include $(OMEGA_HOME)/Config/GNUmakefile.rules
+
+Corba.o: Corba.h Corba.cc XGobiCorbaServer.h XGobiServer.h
+
+XGobiCorbaServer.h: XGobiCorbaServer.idl
+XGobiCorbaServer.cpp: XGobiCorbaServer.idl
+XGobiCorbaServer_skel.cpp: XGobiCorbaServer.idl
+XGobiCorbaServer_skel.h: XGobiCorbaServer.idl
+
+
+ # xgobi: Corba.o  XGobiCorbaServer.o
+
+CORBASRC=Corba.cc XGobiCorbaServer_skel.cpp  XGobiCorbaServer.cpp
+CORBAOBJ=Corba.o XGobiCorbaServer_skel.o XGobiCorbaServer.o
+
+
+OMEGA_IDL_INCLUDES=$(OMEGA_HOME)/Interfaces/CORBA/IDLTypes
+
+
+IDLCFLAGS=-I$(OMEGA_IDL_INCLUDES)
+
+
+%.cpp: %.idl
+	$(IDLCC) $(IDLCFLAGS) $<
+
+%.c: %.idl
+	$(IDLCC) $(IDLCFLAGS) $<
+
+%.h: %.idl
+	$(IDLCC) $(IDLCFLAGS) $<
+
+%.h: %.nw
+	$(WEB) -RHeader $< > $@
+
+%.cc: %.nw
+	$(WEB) $< > $@
+
+
+%.o: %.cc
+	$(CXX) -g $(CXXFLAGS) -c $< -o $@
+
+%.o: %.cpp
+	$(CXX) -g $(CXXFLAGS) -c $< -o $@
+
+
+XGobiCorbaServer.o: XGobiCorbaServer.cpp XGobiCorbaServer.h
+
+
+
+.PRECIOUS:	Corba.cc Corba.h
+
+Corba.tar.gz:
+	tar zcvf $@ GNUmakefile Imakefile Corba.nw XGobiCorbaServer.idl XGobiServer.h xgobi.c xgobitop.h xgobitypes.h xincludes.h
+
+
+TAGS: $(shell ls *.[ch])
+	etags *.[ch]
+
+irfeed:
+	irfeed -I${OMEGA_HOME}/Interfaces/CORBA/IDLTypes XGobiCorbaServer.idl
+
+#endif   /* End of USE_CORBA */
+
+
+
+
 
 /**/#
 /**/# RPC: Remote Procedure Calls
@@ -40,7 +164,7 @@
        CCOPTIONS = -Aa -D_HPUX_SOURCE -DXLIB_ILLEGAL_ACCESS 
 #endif
 
- LOCAL_LIBRARIES = XawClientLibs
+ LOCAL_LIBRARIES =  $(CORBA_LIBRARIES) XawClientLibs
 #ifdef DCE_RPC
    SYS_LIBRARIES = -lm -ldce -lpthread
 #else
@@ -132,17 +256,21 @@ RPCSRC =
 RPCOBJ =
 #endif
 
-XGOBISRC = xgobi.c $(JOINTSRC) $(RPCSRC)
-XGOBIOBJ = xgobi.o $(JOINTOBJ) $(RPCOBJ)
+XGOBISRC = xgobi.c $(JOINTSRC) $(RPCSRC) $(CORBASRC)
+XGOBIOBJ = xgobi.o $(JOINTOBJ) $(RPCOBJ) $(CORBAOBJ)
 
 XGVISSRC = xgvis.c xgv_dissim.c xgv_mds.c \
 	xgv_molecule.c xgv_read_data.c xgv_help.c \
-	xgv_stress.c xgv_cbacks.c xgv_widgets.c $(JOINTSRC)
+	xgv_stress.c xgv_cbacks.c xgv_widgets.c $(JOINTSRC) 
 XGVISOBJ = xgvis.o xgv_dissim.o xgv_mds.o \
 	xgv_molecule.o xgv_read_data.o xgv_help.o \
-	xgv_stress.o xgv_cbacks.o xgv_widgets.o $(JOINTOBJ)
+	xgv_stress.o xgv_cbacks.o xgv_widgets.o $(JOINTOBJ) 
 
 all:: xgvis xgobi
+
+foo:
+	echo $(USRLIBDIR)
+	echo "$(LDPRELIBS) $(origin LDPRELIBS)"
 
 SingleProgramTarget(xgobi, $(XGOBIOBJ), NullParameter, $(LOCAL_LIBRARIES))
 SingleProgramTarget(xgvis, $(XGVISOBJ), NullParameter, $(LOCAL_LIBRARIES))
@@ -156,3 +284,5 @@ purexgvis: xgvis.o $(XGVISOBJ)
 	purify -cache-dir=/tmp  -always-use-cache-dir=yes \
 	${CC} ${CFLAGS} ${LD} ${LDOPTIONS} -o xgvis ${XGVISOBJ} ${LOCAL_LIBRARIES} \
 	${SYS_LIBRARIES}
+
+
