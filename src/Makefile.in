@@ -40,7 +40,7 @@ JOINTOBJ = xgobi_init.o pipeline.o read_array.o \
 
 
 
-include Makefile.corba
+@Makefile_CORBA_include@
 
 
 XGOBISRC = xgobi.c $(JOINTSRC) $(RPCSRC) $(CORBASRC)

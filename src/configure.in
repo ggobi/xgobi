@@ -90,6 +90,8 @@ AC_ARG_ENABLE(corba,
 dnl Write the IDL rules, the additional files, etc.
         AC_SUBST(CORBASRC)
         AC_SUBST(CORBAOBJ)
+        Makefile_CORBA_include="include Makefile.corba"
+        AC_SUBST(Makefile_CORBA_include)
      fi
     ])
 
