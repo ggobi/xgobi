@@ -331,12 +331,13 @@ initialize_data(int argc, char *argv[])
   }
   if (found) {
     /* Reading position array. */
-    if (pos_orig.nrows != 0)
+    if (pos_orig.nrows != 0) {
       fprintf(stderr, "Redundant data-- ignoring positions from %s.\n",
         fname);
-    else
+    } else {
       fprintf(stderr, "reading positions: %s\n", fname);
       read_array_struct(fname, &pos_orig, NO_NAS);
+    }
   }
 
   sprintf(fname, "%s.edges", xgv_basename);
