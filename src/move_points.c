@@ -30,6 +30,9 @@
   xg->glyph_now[(i)].size == xg->glyph_now[(j)].size ) \
 
 int moving_point = -1;
+int move_type = 0;
+/* for selections elsewhere, e.g., xgvis anchor group; initalize to first point */
+int point_midbutton = NULL;
 
 /* choose a cursor at some point */
 
@@ -40,14 +43,11 @@ static int last_moved = -1;
 static int last_x = -1, last_y = -1;
 lcoords eps;
 
-/* AB for selections elsewhere, e.g., xgvis anchor group; initalize to first point */
-int point_midbutton = 0;
 
 static Widget mp_panel;
 static Widget reset_all_cmd, reset_one_cmd;
 
 static Widget move_type_cmd[3], movePanel;
-int move_type = 0;
 
 static Widget mpdir_menu_label, mpdir_menu_cmd, mpdir_menu, mpdir_menu_btn[3];
 static char *mpdir_menu_btn_label[] = {"Both", "Vert", "Horiz"};
@@ -277,27 +277,9 @@ reset_one_cback(Widget w, xgobidata *xg, XtPointer cb_data) {
 }
 
 /* ARGSUSED */
-/*
-static XtCallbackProc
-use_groups_cback(Widget w, xgobidata *xg, XtPointer callback_data)
-{
-  move_type = !move_type;
-
-  if (move_type) {
-    if (xg->ncols_used < xg->ncols) {
-      save_brush_groups(xg);
-    }
-  }
-  setToggleBitmap(w, move_type);
-
-}
-*/
-
-/* ARGSUSED */
 void
 reset_move_type(xgobidata *xg)
 {
-  if (move_type==1) save_brush_groups(xg);
 
   /* move point */
   XtVaSetValues(move_type_cmd[0],
@@ -318,6 +300,7 @@ reset_move_type(xgobidata *xg)
   setToggleBitmap(move_type_cmd[2], move_type == 2);
 
 }
+
 /* ARGSUSED */
 static XtCallbackProc
 setMoveTypePointCback(Widget w, xgobidata *xg, XtPointer callback_data)
@@ -327,6 +310,7 @@ setMoveTypePointCback(Widget w, xgobidata *xg, XtPointer callback_data)
     reset_move_type(xg);
   }
 }
+
 /* ARGSUSED */
 static XtCallbackProc
 setMoveTypeGroupCback(Widget w, xgobidata *xg, XtPointer callback_data)
@@ -397,9 +381,6 @@ make_move_points(xgobidata *xg) {
     XtAddCallback(mpdir_menu_btn[k],  XtNcallback,
       (XtCallbackProc) set_mpdir_cback, (XtPointer) xg);
 
-  /*----------------------------------------------------------------*/
-
-  /* Choice of metric or non-metric MDS */
   movePanel = XtVaCreateManagedWidget("Panel",
     boxWidgetClass, mp_panel,
     XtNhorizDistance, 5,
@@ -413,7 +394,7 @@ make_move_points(xgobidata *xg) {
   move_type_cmd[0] = XtVaCreateWidget("XGVToggle",
     toggleWidgetClass, movePanel,
     XtNstate, (Boolean) True,
-    XtNlabel, (String) "Move Point",
+    XtNlabel, (String) "Move Point  ",
     NULL);
   move_type_cmd[1] = XtVaCreateWidget("XGVToggle",
     toggleWidgetClass, movePanel,
@@ -422,7 +403,7 @@ make_move_points(xgobidata *xg) {
     NULL);
   move_type_cmd[2] = XtVaCreateWidget("XGVToggle",
     toggleWidgetClass, movePanel,
-    XtNlabel, (String) "Move All",
+    XtNlabel, (String) "Move All      ",
     XtNradioGroup, move_type_cmd[0],
     NULL);
   XtManageChildren(move_type_cmd, 3);
@@ -436,17 +417,6 @@ make_move_points(xgobidata *xg) {
     (XtCallbackProc) setMoveTypeGroupCback, (XtPointer) xg);
   XtAddCallback(move_type_cmd[2], XtNcallback,
     (XtCallbackProc) setMoveTypeAllCback, (XtPointer) xg);
-
-  /*
-  use_groups_cmd = CreateToggle(xg, "Move Groups",
-    True, (Widget) NULL, (Widget) NULL, (Widget) NULL, move_type,
-    ANY_OF_MANY, mp_panel, "MP_Groups");
-  XtManageChild(use_groups_cmd);
-  XtAddCallback(use_groups_cmd, XtNcallback,
-    (XtCallbackProc) use_groups_cback, (XtPointer) xg);
-  */
-
-  /*----------------------------------------------------------------*/
 
   reset_all_cmd = CreateCommand(xg, "Reset all",
     True, (Widget) NULL, (Widget) NULL,
@@ -505,3 +475,4 @@ void move_points_on (xgobidata *xg)
     }
   }
 }
+
