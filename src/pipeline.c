@@ -541,6 +541,7 @@ update_lims(xgobidata *xg)
   }
 }
 
+
 void
 tform_to_world(xgobidata *xg)
 {
@@ -696,6 +697,11 @@ screen_to_plane(xgobidata *xg, int pt, icoords *eps,
 {
   icoords prev_planar;
   find_plot_center(xg);
+
+  /* fixes the hor/vert movement problem; AB July 18 2001
+   * but still doesn't work right in corr tour 
+   * when the same variable is used for both vertical and horizontal manip */
+  eps->x = 0;  eps->y = 0;  
 
   if (horiz) {
     xg->screen[pt].x -= xg->cntr.x;
