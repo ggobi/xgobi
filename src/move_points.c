@@ -24,6 +24,11 @@
 #include "xgobivars.h"
 #include "xgobiexterns.h"
 
+#define SAMEGLYPH(i,j) \
+( xg->color_now[(i)] == xg->color_now[(j)] && \
+  xg->glyph_now[(i)].type == xg->glyph_now[(j)].type && \
+  xg->glyph_now[(i)].size == xg->glyph_now[(j)].size ) \
+
 int moving_point = -1;
 
 /* choose a cursor at some point */
@@ -35,10 +40,14 @@ static int last_moved = -1;
 static int last_x = -1, last_y = -1;
 lcoords eps;
 
+/* AB for selections elsewhere, e.g., xgvis anchor group; initalize to first point */
+int point_midbutton = 0;
+
 static Widget mp_panel;
 static Widget reset_all_cmd, reset_one_cmd;
 
-static Boolean use_brush_groups = False;
+static Widget move_type_cmd[3], movePanel;
+int move_type = 0;
 
 static Widget mpdir_menu_label, mpdir_menu_cmd, mpdir_menu, mpdir_menu_btn[3];
 static char *mpdir_menu_btn_label[] = {"Both", "Vert", "Horiz"};
@@ -71,6 +80,15 @@ mp_button(Widget w, xgobidata *xg, XEvent *evnt, Boolean *cont)
       moving_point = -1;
     }
   }
+
+  /* AB select a point for use in xgvis */
+  if (xbutton->button == 2) {
+    if(xbutton->type == ButtonPress) {
+      point_midbutton = xg->nearest_point;
+      printf("point_midbutton = %d\n", point_midbutton);
+    }
+  }
+
 }
 
 void
@@ -95,39 +113,29 @@ move_pt(int id, int x, int y, xgobidata *xg) {
 
   /* Move the selected point */
   screen_to_plane(xg, id, &eps,
-    (mpdir_type == horiz || mpdir_type == both),
-    (mpdir_type == vert || mpdir_type == both));
+		  (mpdir_type == horiz || mpdir_type == both),
+		  (mpdir_type == vert || mpdir_type == both));
   move_pt_pipeline(id, &eps, xg);  /*-- eps won't be changed here --*/
 
-  if (use_brush_groups) {
-    if (xg->nclust > 1) {
-      int cur_clust = (int) xg->raw_data[id][xg->ncols_used-1];
+  /* Move all points with same glyph as the selected point */
+  if (move_type == 1) {
+    for (i=0; i<xg->nrows_in_plot; i++) {
+      k = xg->rows_in_plot[i];
+      if (k!=id && !xg->erased[k] && SAMEGLYPH(k,id)) {
+	if (mpdir_type == horiz || mpdir_type == both) { xg->planar[k].x += eps.x; }
+	if (mpdir_type == vert  || mpdir_type == both) { xg->planar[k].y += eps.y; }
+	move_pt_pipeline(k, &eps, xg);
+  }}}  /* sorry AB */
 
-      /*
-       * Move all points which belong to the same cluster
-       * as the selected point.
-      */
-      for (i=0; i<xg->nrows_in_plot; i++) {
-        k = xg->rows_in_plot[i];
-        if (k == id)
-          ;
-        else {
-          if ((int)xg->raw_data[k][xg->ncols_used-1] == cur_clust) {
-            if (!xg->erased[k]) {   /* ignore erased values altogether */
-
-              if (mpdir_type == horiz || mpdir_type == both) {
-                xg->planar[k].x += eps.x;
-              }
-              if (mpdir_type == vert || mpdir_type == both) {
-                xg->planar[k].y += eps.y;
-              }
-              move_pt_pipeline(k, &eps, xg);
-            }
-          }
-        }
-      }
-    }
-  }
+  /* Move ALL points */
+  if (move_type == 2) {
+    for (i=0; i<xg->nrows_in_plot; i++) {
+      k = xg->rows_in_plot[i];
+      if (k!=id && !xg->erased[k]) {
+	if (mpdir_type == horiz || mpdir_type == both) { xg->planar[k].x += eps.x; }
+	if (mpdir_type == vert  || mpdir_type == both) { xg->planar[k].y += eps.y; }
+	move_pt_pipeline(k, &eps, xg);
+  }}}  /* sorry AB */
 
   /* and now forward again, all the way ... */
   update_world(xg);
@@ -191,6 +199,7 @@ move_points_proc(xgobidata *xg)
       moving_point = -1;
       if ( (xg->nearest_point = find_nearest_point(&cpos, xg)) != -1) {
         quickplot_once(xg);
+	/* AB would like to draw a point in bottom right with selected glyph/color */
       }
     }
     else {
@@ -216,11 +225,18 @@ move_points_proc(xgobidata *xg)
 }
 
 static void
-map_move_points(Boolean on) {
-  if (on) 
-    XtMapWidget(mp_panel);
+map_move_points(xgobidata *xg, Boolean movepts) 
+{
+  if (movepts) 
+    {
+      XtMapWidget(xg->movepts_mouse);
+      XtMapWidget(mp_panel);
+    }
   else
+    {
+    XtUnmapWidget(xg->movepts_mouse);
     XtUnmapWidget(mp_panel);
+    }
 }
 
 /* ARGSUSED */
@@ -261,18 +277,73 @@ reset_one_cback(Widget w, xgobidata *xg, XtPointer cb_data) {
 }
 
 /* ARGSUSED */
+/*
 static XtCallbackProc
 use_groups_cback(Widget w, xgobidata *xg, XtPointer callback_data)
 {
-  use_brush_groups = !use_brush_groups;
+  move_type = !move_type;
 
-  if (use_brush_groups) {
+  if (move_type) {
     if (xg->ncols_used < xg->ncols) {
       save_brush_groups(xg);
     }
   }
-  setToggleBitmap(w, use_brush_groups);
+  setToggleBitmap(w, move_type);
 
+}
+*/
+
+/* ARGSUSED */
+void
+reset_move_type(xgobidata *xg)
+{
+  if (move_type==1) save_brush_groups(xg);
+
+  /* move point */
+  XtVaSetValues(move_type_cmd[0],
+    XtNstate, move_type == 0,
+    NULL);
+  setToggleBitmap(move_type_cmd[0], move_type == 0);
+
+  /* move group */
+  XtVaSetValues(move_type_cmd[1],
+    XtNstate, move_type == 1,
+    NULL);
+  setToggleBitmap(move_type_cmd[1], move_type == 1);
+
+  /* move all */
+  XtVaSetValues(move_type_cmd[2],
+    XtNstate, move_type == 2,
+    NULL);
+  setToggleBitmap(move_type_cmd[2], move_type == 2);
+
+}
+/* ARGSUSED */
+static XtCallbackProc
+setMoveTypePointCback(Widget w, xgobidata *xg, XtPointer callback_data)
+{
+  if(move_type != 0) {
+    move_type = 0;
+    reset_move_type(xg);
+  }
+}
+/* ARGSUSED */
+static XtCallbackProc
+setMoveTypeGroupCback(Widget w, xgobidata *xg, XtPointer callback_data)
+{
+  if(move_type != 1) {
+    move_type = 1;
+    reset_move_type(xg);
+  }
+}
+/* ARGSUSED */
+static XtCallbackProc
+setMoveTypeAllCback(Widget w, xgobidata *xg, XtPointer callback_data)
+{
+  if(move_type != 2) {
+    move_type = 2;
+    reset_move_type(xg);
+  }
 }
 
 /* ARGSUSED */
@@ -303,7 +374,7 @@ set_mpdir_cback(Widget w, xgobidata *xg, XtPointer cb)
 
 void
 make_move_points(xgobidata *xg) {
-  Widget use_groups_cmd;
+  /*  Widget use_groups_cmd;*/
   Widget mpdir_box;
   int k;
 
@@ -326,12 +397,56 @@ make_move_points(xgobidata *xg) {
     XtAddCallback(mpdir_menu_btn[k],  XtNcallback,
       (XtCallbackProc) set_mpdir_cback, (XtPointer) xg);
 
-  use_groups_cmd = CreateToggle(xg, "Use 'group' var",
-    True, (Widget) NULL, (Widget) NULL, (Widget) NULL, use_brush_groups,
+  /*----------------------------------------------------------------*/
+
+  /* Choice of metric or non-metric MDS */
+  movePanel = XtVaCreateManagedWidget("Panel",
+    boxWidgetClass, mp_panel,
+    XtNhorizDistance, 5,
+    XtNvertDistance, 5,
+    XtNorientation, (XtOrientation) XtorientVertical,
+    XtNleft, (XtEdgeType) XtChainLeft,
+    XtNtop, (XtEdgeType) XtChainTop,
+    XtNright, (XtEdgeType) XtChainLeft,
+    XtNbottom, (XtEdgeType) XtChainTop,
+    NULL);
+  move_type_cmd[0] = XtVaCreateWidget("XGVToggle",
+    toggleWidgetClass, movePanel,
+    XtNstate, (Boolean) True,
+    XtNlabel, (String) "Move Point",
+    NULL);
+  move_type_cmd[1] = XtVaCreateWidget("XGVToggle",
+    toggleWidgetClass, movePanel,
+    XtNlabel, (String) "Move Group",
+    XtNradioGroup, move_type_cmd[0],
+    NULL);
+  move_type_cmd[2] = XtVaCreateWidget("XGVToggle",
+    toggleWidgetClass, movePanel,
+    XtNlabel, (String) "Move All",
+    XtNradioGroup, move_type_cmd[0],
+    NULL);
+  XtManageChildren(move_type_cmd, 3);
+
+  setToggleBitmap(move_type_cmd[0], True);
+  setToggleBitmap(move_type_cmd[1], False);
+  setToggleBitmap(move_type_cmd[2], False);
+  XtAddCallback(move_type_cmd[0], XtNcallback,
+    (XtCallbackProc) setMoveTypePointCback, (XtPointer) xg);
+  XtAddCallback(move_type_cmd[1], XtNcallback,
+    (XtCallbackProc) setMoveTypeGroupCback, (XtPointer) xg);
+  XtAddCallback(move_type_cmd[2], XtNcallback,
+    (XtCallbackProc) setMoveTypeAllCback, (XtPointer) xg);
+
+  /*
+  use_groups_cmd = CreateToggle(xg, "Move Groups",
+    True, (Widget) NULL, (Widget) NULL, (Widget) NULL, move_type,
     ANY_OF_MANY, mp_panel, "MP_Groups");
   XtManageChild(use_groups_cmd);
   XtAddCallback(use_groups_cmd, XtNcallback,
     (XtCallbackProc) use_groups_cback, (XtPointer) xg);
+  */
+
+  /*----------------------------------------------------------------*/
 
   reset_all_cmd = CreateCommand(xg, "Reset all",
     True, (Widget) NULL, (Widget) NULL,
@@ -361,7 +476,7 @@ void move_points_on (xgobidata *xg)
     XtRemoveEventHandler(xg->workspace,
       XtAllEvents, TRUE,
       (XtEventHandler) mp_button, (XtPointer) xg);
-    map_move_points(False);
+    map_move_points(xg, False);
     xg->nearest_point = -1;
     plot_once(xg);
   }
@@ -374,7 +489,7 @@ void move_points_on (xgobidata *xg)
       (xg->is_corr_touring && !xg->is_corr_pursuit))
     {
       xg->is_point_moving = True;
-      map_move_points(True);
+      map_move_points(xg, True);
       XtAddEventHandler(xg->workspace,
         ButtonPressMask | ButtonReleaseMask, FALSE,
         (XtEventHandler) mp_button, (XtPointer) xg);

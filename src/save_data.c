@@ -1331,6 +1331,7 @@ save_collabels(char *rootname, int *colv, int nc, int data_ind, xgobidata *xg)
     strcpy(fname, rootname);
 
   sprintf(fnameplus, "%s.col", fname);
+  XtFree(fname);
 
   if (xg->data_mode == Sprocess)
     return(0);
@@ -1339,7 +1340,6 @@ save_collabels(char *rootname, int *colv, int nc, int data_ind, xgobidata *xg)
     if (fp == NULL) {
       sprintf(message, "Failed to open %s for writing.\n", fnameplus);
       show_message(message, xg);
-      XtFree(fname);
       return(0);
     }
     else {
@@ -1389,6 +1389,7 @@ save_rowlabels(char *rootname, int *rowv, int nr, xgobidata *xg)
     strcpy(fname, rootname);
 
   sprintf(fnameplus, "%s.row", fname);
+  XtFree(fname);
 
   if (xg->data_mode == Sprocess)
     return(0);
@@ -1397,7 +1398,6 @@ save_rowlabels(char *rootname, int *rowv, int nr, xgobidata *xg)
     if (fp == NULL) {
       sprintf(message, "Failed to open %s for writing.\n", fnameplus);
       show_message(message, xg);
-      XtFree(fname);
       return(0);
     }
     else
@@ -1420,6 +1420,7 @@ brush_save_colors(char *rootname, int *rowv, int nr, xgobidata *xg)
   long foo;
   FILE *fp;
   char message[MSGLENGTH];
+  Boolean color_found;
 
   if (rowv == (int *) NULL) {
     rowv = (int *) XtMalloc((Cardinal) nr * sizeof(int));
@@ -1468,12 +1469,17 @@ brush_save_colors(char *rootname, int *rowv, int nr, xgobidata *xg)
           (void) fprintf(stderr, "error 2 in writing color vector\n");
 
         for (i=0; i<nr; i++) {
+          color_found = False;
           ir = rowv[i];
           for (k=0; k<ncolors; k++) {
             if (color_nums[k] == xg->color_now[ir]) {
               (void) strcpy(NAMESV(ir), color_names[k]);
+              color_found = True;
               break;
             }
+          }
+          if (!color_found) {  /*-- color not found, use Default --*/
+            (void) strcpy(NAMESV(ir), "Default");
           }
           nameslen = nameslen + strlen(NAMESV(ir)) + 1;
         }
@@ -1853,6 +1859,7 @@ save_lines(char *rootname, int *rowv, int nr, xgobidata *xg)
       sprintf(message,
         "The file '%s' can not be opened for writing\n", fnameplus);
       show_message(message, xg);
+      XtFree (fname);
       return(0);
     } else {
       for (k=0; k<nl; k++)
@@ -1863,6 +1870,8 @@ save_lines(char *rootname, int *rowv, int nr, xgobidata *xg)
 
   if (nr != xg->nrows)
     XtFree((char *) tlinks);
+
+  XtFree (fname);
   return(1);
 }
 
@@ -1877,6 +1886,7 @@ save_line_colors(char *rootname, int *rowv, int nr, xgobidata *xg)
   char message[MSGLENGTH];
   int nl;
   connect_lines *tlinks;
+  Boolean color_found;
 
   if (rowv == (int *) NULL) {
     rowv = (int *) XtMalloc((Cardinal) nr * sizeof(int));
@@ -1899,18 +1909,22 @@ save_line_colors(char *rootname, int *rowv, int nr, xgobidata *xg)
     nl = xg->nlines;
     tlinks = xg->connecting_lines;
     for (k=0; k<nl; k++) {
+      color_found = False;
       for (i=0; i<ncolors; i++) {
         if (color_nums[i] == xg->line_color_now[k]) {
           (void) strcpy(NAMESV(k), color_names[i]);
-          nameslen = nameslen + strlen(NAMESV(k)) + 1;
+          color_found = True;
           break;
         }
       }
+      if (!color_found) {  /*-- color not found, use Default --*/
+        (void) strcpy(NAMESV(k), "Default");
+      }
+      nameslen = nameslen + strlen(NAMESV(k)) + 1;
     }
 
   } else {
     /*
-     *
      * Determine the number of links to be saved -- may as
      * well build a temporary links structure to use, actually.
      * nameslen, a global variable, is supposed to be set in

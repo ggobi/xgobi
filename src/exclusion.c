@@ -196,7 +196,6 @@ static XtCallbackProc
 exclude_cback(Widget w, xgobidata *xg, XtPointer callback_data)
 {
   int i, k;
-  Boolean excluded;
 
   for (k=0; k<xg->nclust; k++) {
     if (w == exclude_tgl[k]) {
@@ -421,32 +420,6 @@ alloc_clust(xgobidata *xg) {
 }
 
 static void
-create_clust_widgets(xgobidata *xg) {
-  int i;
-
-  save_brush_groups (xg);
-
-  if (xg->nclust > 1) {
-    alloc_clust(xg);
-
-    for (i=0; i<xg->nclust; i++)
-      addGroup(i, eform, xg);
-
-    XtManageChildren(hide_tgl, xg->nclust);
-    XtManageChildren(exclude_tgl, xg->nclust);
-  } else {
-
-    (void) XtVaCreateManagedWidget("HideOrExclude",
-      labelWidgetClass, eform,
-      XtNlabel, "*** There's just one group; all symbols are alike ***",
-      XtNfromVert, collbl[0],
-      XtNleft, (XtEdgeType) XtChainLeft,
-      XtNright, (XtEdgeType) XtChainRight,
-      NULL);
-  }
-}
-
-static void
 shift_clust_widgets(xgobidata *xg) {
   int i, k;
   Dimension colwidth[4];
@@ -470,6 +443,32 @@ shift_clust_widgets(xgobidata *xg) {
         XtVaSetValues(exclude_tgl[k],
           XtNhorizDistance, (colwidth[3]-cboxwidth)/2, NULL);
     }
+  }
+}
+
+static void
+create_clust_widgets(xgobidata *xg) {
+  int i;
+
+  save_brush_groups (xg);
+
+  if (xg->nclust > 1) {
+    alloc_clust(xg);
+
+    for (i=0; i<xg->nclust; i++)
+      addGroup(i, eform, xg);
+
+    XtManageChildren(hide_tgl, xg->nclust);
+    XtManageChildren(exclude_tgl, xg->nclust);
+  } else {
+
+    (void) XtVaCreateManagedWidget("HideOrExclude",
+      labelWidgetClass, eform,
+      XtNlabel, "*** There's just one group; all symbols are alike ***",
+      XtNfromVert, collbl[0],
+      XtNleft, (XtEdgeType) XtChainLeft,
+      XtNright, (XtEdgeType) XtChainRight,
+      NULL);
   }
 }
 
@@ -883,3 +882,6 @@ save_brush_groups (xgobidata *xg) {
 
   XtFree((XtPointer) cols);
 }
+
+
+

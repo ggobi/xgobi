@@ -142,7 +142,8 @@ update_plot(xgobidata *xg)
   /* copy pos.data to xg->raw_data */
   copy_pos_to_raw(xg);
   copy_raw_to_tform(xg);
-  update_lims(xg);
+  /* commented out July 17, 2001, in an effort to make point motion smoother */
+  /*update_lims(xg);*/
   update_world(xg);
   world_to_plane(xg);
   plane_to_screen(xg);

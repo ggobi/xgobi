@@ -407,17 +407,17 @@ make_plotwindow_mouse_labels(xgobidata *xg)
   XtSetArg(args[1], XtNtop, (XtEdgeType) XtChainBottom);
   XtSetArg(args[2], XtNbottom, (XtEdgeType) XtChainBottom);
 
-  XtSetArg(args[3], XtNlabel, "L or M: Move points ");
+  XtSetArg(args[3], XtNlabel, "Drag L or M: Move points ");
   xg->spin_mouse = XtCreateManagedWidget("MouseLabel",
     labelWidgetClass, xg->box1, args, 4);
   if (mono) set_mono(xg->spin_mouse);
 
-  XtSetArg(args[3], XtNlabel, "L: Move pts, M: Shape pts ");
+  XtSetArg(args[3], XtNlabel, "Drag L: Move pts; Drag M: Shape pts ");
   xg->scale_mouse = XtCreateManagedWidget("MouseLabel",
     labelWidgetClass, xg->box1, args, 4);
   if (mono) set_mono(xg->scale_mouse);
 
-  XtSetArg(args[3], XtNlabel, "Drag L: paint, M: shape ");
+  XtSetArg(args[3], XtNlabel, "Drag/Click L: paint; Drag M: shape ");
   xg->brush_mouse = XtCreateManagedWidget("MouseLabel",
     labelWidgetClass, xg->box1, args, 4);
   if (mono) set_mono(xg->brush_mouse);
@@ -437,17 +437,17 @@ make_plotwindow_mouse_labels(xgobidata *xg)
     labelWidgetClass, xg->box1, args, 4);
   if (mono) set_mono(xg->le_delete_mouse);
 
-  XtSetArg(args[3], XtNlabel, "L: Move point ");
+  XtSetArg(args[3], XtNlabel, "Drag L: Move point/group/all");
   xg->movepts_mouse = XtCreateManagedWidget("MouseLabel",
     labelWidgetClass, xg->box1, args, 4);
   if (mono) set_mono(xg->movepts_mouse);
 
-  XtSetArg(args[3], XtNlabel, "L or M: Manipulate Variable ");
+  XtSetArg(args[3], XtNlabel, "Drag L or M: Manipulate Variable ");
   xg->tour_mouse = XtCreateManagedWidget("MouseLabel",
     labelWidgetClass, xg->box1, args, 4);
   if (mono) set_mono(xg->tour_mouse);
 
-  XtSetArg(args[3], XtNlabel, "L or M: Manipulate Variable ");
+  XtSetArg(args[3], XtNlabel, "Drag L or M: Manipulate Variable ");
   xg->corr_mouse = XtCreateManagedWidget("MouseLabel",
     labelWidgetClass, xg->box1, args, 4);
   if (mono) set_mono(xg->corr_mouse);

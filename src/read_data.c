@@ -939,8 +939,9 @@ xgobidata *xg)
 
           if (retval <= 0) {
             /* not using show_message() here; reading before xgobi startup */
-            (void) fprintf(stderr, "!!Error in reading %s; using defaults.\n",
-              lab_file);
+            (void) fprintf(stderr,
+              "!!Error in reading %s.glyphs; using defaults.\n",
+              data_in);
             use_defaults = True;
             break;
           }
@@ -1217,7 +1218,8 @@ xgobidata *xg)
             fprintf(stderr,
               "available as brushing colors, which will cause weird\n");
             fprintf(stderr,
-              "behavior during brushing.  To read how to set the brushing\n");
+              "behavior during brushing and prevent you from saving colors.\n");
+            fprintf (stderr, "To read how to set the brushing\n");
             fprintf(stderr,
               "colors, click right on the Color Menu button.\n");
           }
@@ -1504,9 +1506,8 @@ read_line_colors(char *rootname, Boolean addsuffix, Boolean startup,
 xgobidata *xg)
   /* startup --  Initializing xgobi? */
 {
-  int i;
+  int i, j;
   Boolean found = false, ok = true;
-  char *fname;
   char color_name[32];
   FILE *fp;
   Colormap cmap = DefaultColormap(display, DefaultScreen(display));
@@ -1558,7 +1559,8 @@ xgobidata *xg)
               }
               else {
                 fprintf(stderr,
-                  "Error in reading %s; using defaults.\n", fname);
+                  "Error in reading %s.linecolors; using defaults.\n",
+                  rootname);
                 ok = False;
                 break;
               }
@@ -1572,9 +1574,43 @@ xgobidata *xg)
               nc++;
             }
           }
+        } else { /* no color name; initialize with default color */
+          xg->line_color_ids[i] = xg->line_color_now[i] =
+            xg->line_color_prev[i] = plotcolors.fg;
         }
       }
       fclose(fp);
+
+      /*
+       * The colors that were supplied in the .linecolors
+       * should match the brushing colors (color_nums)
+       * If they don't, instruct the user to set the color
+       * resources.
+      */
+      for (i=0; i<xg->nlines; i++) {
+        found = False;
+        for (j=0; j<ncolors; j++) {
+          if (xg->line_color_now[i] == color_nums[j]) {
+            found = True;
+            break;
+          }
+        }
+        if (!found)
+          break;
+      }
+      if (!found)
+      {
+        fprintf(stderr,
+          "Warning:  Your .linecolors file contains colors that are not\n");
+        fprintf(stderr,
+          "available as brushing colors, which will cause weird\n");
+        fprintf(stderr,
+          "behavior during brushing and prevent you from saving colors.\n");
+        fprintf (stderr, "To read how to set the brushing\n");
+        fprintf(stderr,
+          "colors, click right on the Color Menu button.\n");
+      }
+
   }
   return(ok);
 }

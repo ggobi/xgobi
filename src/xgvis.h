@@ -45,7 +45,7 @@ XGVIS_ int is_rescale  INIT(= 0);
 XGVIS_ Widget dist_cmd, dist_popup, dist_mgr, dist_types[NDISTTYPES] ;
 XGVIS_ int dist_type INIT(= 0) ;
 
-XGVIS_ enum {within, between, anchored, none} mds_group_ind;
+XGVIS_ enum {deflt, within, between, anchorscales, anchorfixed} mds_group_ind;
 XGVIS_ double mds_power  INIT(= 1.0);
 XGVIS_ double mds_weightpow INIT(= 0.0);
 XGVIS_ double mds_lnorm  INIT(= 2.0);
@@ -60,6 +60,7 @@ XGVIS_ double distance_factor;
 XGVIS_ double *distance_vector, *distance_vector_sort;
 XGVIS_ double *config_distances;
 XGVIS_ int ndistances;
+XGVIS_ int num_active_dist;
 
 XGVIS_ double configuration_factor;
 

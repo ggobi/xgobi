@@ -7,7 +7,7 @@ the window locally on a PC running Windows.
 Recently, though, Brian Ripley put together a version of xgobi
 that works under X servers that run directly on the PC.
 
-   http://www.stats.ox.ac.uk/pub/SWin/
+   http://www.stats.ox.ac.uk/pub/SWin/xgobi.zip
 
 The two X servers that promise to do this are: MI/X and Vista/Exceed.
      

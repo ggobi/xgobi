@@ -54,14 +54,15 @@ Widget run_cmd[5];
 #define HELP  run_cmd[4]
 
 /* MDS with groups */
-#define NGROUPBTNS 4
+#define NGROUPBTNS 5
 Widget group_menu_cmd, group_menu_btn[NGROUPBTNS] ;
 Widget group_menu_box, group_menu_lab, group_menu;
 static char *group_menu_btn_label[] = {
-  "Within groups",
-  "Between groups",
-  "Anchored",
-  "None"
+  "Use all dists (default)",
+  "Dists within groups",
+  "Dists between groups",
+  "Dists from&in anchor",
+  "Dists from anchor"
 };
 
 /* ARGSUSED */
@@ -82,22 +83,25 @@ set_mds_group_cback(w, cldata, cdata)
 
   switch (btn) {
     case 0:
-      mds_group_ind = within;
+      mds_group_ind = deflt;
       break;
     case 1:
-      mds_group_ind = between;
+      mds_group_ind = within;
       break;
     case 2:
-      mds_group_ind = anchored;
+      mds_group_ind = between;
       break;
     case 3:
-      mds_group_ind = none;
+      mds_group_ind = anchorscales;
+      break;
+    case 4:
+      mds_group_ind = anchorfixed;
       break;
     default:
-      mds_group_ind = none;
+      mds_group_ind = deflt;
   }
 
-  fprintf(stderr, "%d\n", mds_group_ind);
+  fprintf(stderr, "mds_group_ind = %d\n", mds_group_ind);
 }
 
 static Widget metric_cmd[2], metricPanel;
@@ -232,11 +236,11 @@ make_xgvis_widgets()
   metric_cmd[0] = XtVaCreateWidget("XGVToggle",
     toggleWidgetClass, metricPanel,
     XtNstate, (Boolean) True,
-    XtNlabel, (String) "Metric MDS",
+    XtNlabel, (String) "Metric",
     NULL);
   metric_cmd[1] = XtVaCreateWidget("XGVToggle",
     toggleWidgetClass, metricPanel,
-    XtNlabel, (String) "Non-metric MDS",
+    XtNlabel, (String) "NonMetr",
     XtNradioGroup, metric_cmd[0],
     NULL);
   XtManageChildren(metric_cmd, 2);
@@ -514,7 +518,7 @@ make_xgvis_widgets()
       (XtPointer) NULL );
 */
 
-    mds_group_ind = none;
+    mds_group_ind = deflt;
     build_labelled_menu(&group_menu_box, &group_menu_lab, group_menu_str,
       &group_menu_cmd,
       &group_menu, group_menu_btn,
@@ -534,7 +538,7 @@ make_xgvis_widgets()
 /* Button to launch xgobi to contain diagnostic data */
     mds_launch_label = XtVaCreateManagedWidget("Label",
       labelWidgetClass, mdsPanel,
-      XtNlabel,    "Shepard diagram:",
+      XtNlabel,    "XGobi Shepard diagram:",
       /*XtNfromVert, mds_casewise_cmd,*/
       XtNfromVert, group_menu_box,
       NULL);
@@ -710,7 +714,10 @@ update_shepard_labels(int maxn) {
   /*
    * Set the value of the user-settable text to the maximum
    * of the current value and the maximum value.
+   * AB: don't; leave as the user sets it, even if it's too big.
+   *     reason: otherwise the number keeps shrinking due to repeated MINs.
   */
+  /*
   XtVaGetValues(mds_launch_ntxt, XtNstring, &nstr, NULL);
   if (strlen(nstr) == 0)
     n = maxn;
@@ -720,6 +727,7 @@ update_shepard_labels(int maxn) {
   }
   sprintf(strtmp, "%d", n);
   XtVaSetValues(mds_launch_ntxt, XtNstring, strtmp, NULL);
+  */
 
   /*
    * Set the value of the label to the maximum value
@@ -727,4 +735,8 @@ update_shepard_labels(int maxn) {
   sprintf(strtmp, "of %d dists", maxn);
   XtVaSetValues(mds_launch_nlbl, XtNlabel, strtmp, NULL);
 }
+
+
+
+
 
