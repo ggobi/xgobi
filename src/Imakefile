@@ -16,11 +16,11 @@
 # starting having a weird problem with PWD.  If you're not
 # building xgobi as we hand it out, this shouldn't bother
 # you at all.
-             CC = cc
-      CCOPTIONS = -xansi -n32 -woff 1116
+            #CC = cc
+     #CCOPTIONS = -xansi -n32 -woff 1116
 
-            #CC = gcc
-     #CCOPTIONS = -ansi -w
+            CC = gcc
+     CCOPTIONS = -ansi -w
 
              LD = 
      CDEBUGFLAGS = -g
