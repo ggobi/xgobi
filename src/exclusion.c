@@ -33,12 +33,12 @@
 #include "xgobiexterns.h"
 #include "DrawingA.h"
 
-static Widget epane, epopup = NULL, eform = NULL;
-static Widget *names, *symbols, *hide_tgl, *exclude_tgl;
-static Widget collbl[4];
-static Position popupx = -1, popupy = -1;
-static int nclust_prev = 0;
-static cluster *clusv_prev;
+Widget collbl[4];
+Widget epane, epopup = NULL, eform = NULL;
+Widget *names, *symbols, *hide_tgl, *exclude_tgl;
+Position popupx = -1, popupy = -1;
+int nclust_prev = 0;
+cluster *clusv_prev;
 
 void
 draw_cluster_symbol(xgobidata *xg, int k) {
@@ -107,6 +107,85 @@ draw_cluster_symbol(xgobidata *xg, int k) {
       XDrawLine(display, gwin, copy_GC, 0, 0, 22, 22);
   }
 
+
+  XFlush(display);
+  XSync(display, False);
+}
+
+void
+mark_cluster_symbol(xgobidata *xg, int k, int yes) {
+/*
+ * Draw the current glyph in the current color in the
+ * glyph_wksp.  If no glyph is chosen, draw a border.
+*/
+  Drawable gwin = XtWindow(symbols[k]);
+  int type = xg->clusv[k].glyphtype;
+  int size = xg->clusv[k].glyphsize;
+  icoords xypos[1];
+
+  /* Clear it */
+  XFillRectangle(display, gwin, clear_GC, 0, 0, 40, 40);
+
+/*
+ * The center is at 11, 11 ...   (How that can be?)
+*/
+  xypos[0].x = xypos[0].y = 11;
+
+  /* Set the foreground color */
+  if (!mono) {
+    XSetForeground(display, copy_GC,
+      (xg->clusv[k].color == plotcolors.bg) ? plotcolors.fg :
+        xg->clusv[k].color);
+  }
+
+  if (type == PLUS_GLYPH) {
+    XSegment segv[2];
+    build_plus(xypos, 0, segv, 0, size);
+    XDrawSegments(display, gwin, copy_GC,
+      segv, 2);
+  }
+  else if (type == X_GLYPH) {
+    XSegment segv[2];
+    build_x(xypos, 0, segv, 0, size);
+    XDrawSegments(display, gwin, copy_GC,
+      segv, 2);
+  }
+  else if (type == OPEN_RECTANGLE_GLYPH) {
+    XRectangle rectv[1];
+    build_rect(xypos, 0, rectv, 0, size);
+    XDrawRectangles(display, gwin, copy_GC, rectv, 1);
+  }
+  else if (type == FILLED_RECTANGLE_GLYPH) {
+    XRectangle rectv[1];
+    build_rect(xypos, 0, rectv, 0, size);
+    XFillRectangles(display, gwin, copy_GC, rectv, 1);
+  }
+  else if (type == OPEN_CIRCLE_GLYPH) {
+    XArc circ[1];
+    build_circle(xypos, 0, circ, 0, size);
+    XDrawArcs(display, gwin, copy_GC, circ, 1);
+  }
+  else if (type == FILLED_CIRCLE_GLYPH) {
+    XArc circ[1];
+    build_circle(xypos, 0, circ, 0, size);
+    XFillArcs(display, gwin, copy_GC, circ, 1);
+  }
+  else if (type == POINT_GLYPH) {
+    XDrawPoint(display, gwin, copy_GC, xypos[0].x, xypos[0].y);
+  }
+
+  if (!mono) {
+    if (xg->clusv[k].color == plotcolors.bg)
+      XDrawLine(display, gwin, copy_GC, 0, 0, 22, 22);
+  }
+
+  /* this is the marking part */
+  if(yes) {
+    XDrawLine(display, gwin, copy_GC, 0, 0, 0, 20);
+    XDrawLine(display, gwin, copy_GC, 0,20,20, 20);
+    XDrawLine(display, gwin, copy_GC,20,20,20,  0);
+    XDrawLine(display, gwin, copy_GC,20, 0, 0,  0);
+  }
 
   XFlush(display);
   XSync(display, False);
@@ -196,6 +275,7 @@ static XtCallbackProc
 exclude_cback(Widget w, xgobidata *xg, XtPointer callback_data)
 {
   int i, k;
+  Boolean excluded;
 
   for (k=0; k<xg->nclust; k++) {
     if (w == exclude_tgl[k]) {
@@ -264,7 +344,7 @@ symbol_reset_cb(Widget w, xgobidata *xg, XawDrawingAreaCallbackStruct *cdata)
  * On my machine, state == 8 is not a meaningful test.  This
  * is what would work:                                   dfs
 */
-    printf("%d %d %d\n", button, state, Button1Mask|Mod1Mask);
+    printf("%d %d %d %d\n", button, state, Button1Mask|Mod1Mask, gno);
 
     if (button == 1 && state != 8) {
 
@@ -290,8 +370,10 @@ symbol_reset_cb(Widget w, xgobidata *xg, XawDrawingAreaCallbackStruct *cdata)
           }
         }
       }
-    } else if (button == 2 || (button == 1 && state == 8)) {  /* undo */
+    } else if (button == 2 || (button == 1 && state == 8)) {  
 
+      /* undo */
+      /*
       if (xg->is_color_painting) {
         xg->clusv[gno].color = xg->clusv[gno].color_prev;
         XtVaSetValues(names[gno], XtNforeground, xg->clusv[gno].color, NULL);
@@ -314,10 +396,17 @@ symbol_reset_cb(Widget w, xgobidata *xg, XawDrawingAreaCallbackStruct *cdata)
           }
         }
       }
-
+      */
     }
 
-    draw_cluster_symbol(xg, gno);
+
+    if (button == 1) {
+      draw_cluster_symbol(xg, gno);
+    }
+    if (button == 2) {
+      mark_cluster_symbol(xg, gno, 1);
+    }
+
     plot_once(xg);
 
     /* Update parallel coordinates plot? */
@@ -480,9 +569,7 @@ open_exclusion_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
   Widget form0;
   Dimension width, height;
   int i, k;
-  static char *colname[] = {
-    "Group name", "Symbol", "Hidden", "Excluded"
-  };
+  static char *colname[] = {"Group name", "Symbol", "Hidden", "Excluded"};
 
   if (epopup == NULL) {
 
@@ -549,8 +636,7 @@ open_exclusion_popup_cback(Widget w, xgobidata *xg, XtPointer callback_data)
     */
     for (i=0; i<4; i++) {
       href = (i==0) ? NULL : collbl[i-1];
-
-      collbl[i] = XtVaCreateWidget("HideOrExclude",
+      collbl[i] = XtVaCreateManagedWidget("HideOrExclude",
         labelWidgetClass, eform,
         XtNborderWidth, 0,
         XtNlabel, colname[i],
@@ -742,8 +828,7 @@ save_brush_groups (xgobidata *xg) {
  * If there are missing values, be sure to initialize
  * the added column of the missing values matrix.
 */
-    if (xg->missing_values_present)
-      init_missing_groupvar(xg);
+    if (xg->missing_values_present) init_missing_groupvar(xg);
 
     map_group_var(xg);
 
@@ -850,6 +935,7 @@ save_brush_groups (xgobidata *xg) {
     xg->uold[0][xg->ncols-1] = 0.0;
     xg->uold[1][xg->ncols-1] = 0.0;
   }
+
   update_lims(xg);
   update_world(xg);
 
@@ -873,15 +959,13 @@ save_brush_groups (xgobidata *xg) {
    * been added to a group that's hidden or excluded in the
    * "Hide or exclude groups" panel.
   */
-  if (xg->is_plotting1d)
-    plot1d_texture_var(xg);
+  if (xg->is_plotting1d) plot1d_texture_var(xg);
   world_to_plane(xg);
   plane_to_screen(xg);
   assign_points_to_bins(xg);
   plot_once(xg);
 
   XtFree((XtPointer) cols);
-}
 
-
+} /* save_brush_groups (xgobidata *xg) { */
 
